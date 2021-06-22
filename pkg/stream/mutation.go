@@ -7,18 +7,23 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
-	"github.com/go-gulfstream/gulfstream/pkg/reply"
 
 	"github.com/google/uuid"
 )
 
 type CommandController interface {
-	CommandSink(context.Context, *Stream, *command.Command) (*reply.Reply, error)
+	CommandSink(context.Context, *Stream, *command.Command) (*command.Reply, error)
 }
 
 type EventController interface {
 	StreamIDFromEvent(*event.Event) uuid.UUID
 	EventSink(context.Context, *Stream, *event.Event) error
+}
+
+type CommandCtrlFunc func(context.Context, *Stream, *command.Command) (*command.Reply, error)
+
+func (fn CommandCtrlFunc) CommandSink(ctx context.Context, s *Stream, c *command.Command) (*command.Reply, error) {
+	return fn(ctx, s, c)
 }
 
 type (
@@ -53,37 +58,37 @@ func NewMutation(
 	}
 }
 
-func (m *Mutation) CommandController(
-	commandType string,
+func (m *Mutation) FromCommand(
+	commandName string,
 	ctrl CommandController,
 	opts ...CommandControllerOption,
 ) {
 	controller := &commandController{
 		controller:  ctrl,
-		commandType: commandType,
+		commandType: commandName,
 	}
 	for _, opt := range opts {
 		opt(controller)
 	}
-	m.commandControllers[commandType] = controller
+	m.commandControllers[commandName] = controller
 }
 
-func (m *Mutation) EventController(
-	eventType string,
+func (m *Mutation) FromEvent(
+	eventName string,
 	ctrl EventController,
 	opts ...EventControllerOption,
 ) {
 	controller := &eventController{
 		controller: ctrl,
-		eventType:  eventType,
+		eventType:  eventName,
 	}
 	for _, opt := range opts {
 		opt(controller)
 	}
-	m.eventControllers[eventType] = controller
+	m.eventControllers[eventName] = controller
 }
 
-func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*reply.Reply, error) {
+func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
 	if m.streamName != cmd.StreamName() {
 		return nil, fmt.Errorf("stream mismatch: got %s, expected %s",
 			cmd.StreamName(), m.streamName)
@@ -179,7 +184,7 @@ func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
 	return err
 }
 
-func AllowCreateStream() CommandControllerOption {
+func Create() CommandControllerOption {
 	return func(ctrl *commandController) {
 		ctrl.assignNew = true
 	}

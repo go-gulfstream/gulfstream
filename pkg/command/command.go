@@ -34,6 +34,14 @@ func New(
 	}
 }
 
+func (c *Command) ReplyOk() *Reply {
+	return &Reply{}
+}
+
+func (c *Command) ReplyErr() *Reply {
+	return &Reply{}
+}
+
 func (c *Command) ID() uuid.UUID {
 	return c.id
 }
