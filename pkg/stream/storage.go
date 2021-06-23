@@ -9,14 +9,16 @@ import (
 )
 
 type Storage interface {
+	BlankStream() *Stream
 	Persist(ctx context.Context, stream *Stream) error
 	Load(ctx context.Context, streamName string, streamID uuid.UUID, owner uuid.UUID) (*Stream, error)
 	ConfirmVersion(ctx context.Context, version int) error
 }
 
-func NewStorage() Storage {
+func NewStorage(newStream func() *Stream) Storage {
 	return &stateStorage{
-		data: make(map[key][]byte),
+		data:        make(map[key][]byte),
+		blankStream: newStream,
 	}
 }
 
@@ -30,6 +32,10 @@ type key struct {
 	streamType string
 	streamID   uuid.UUID
 	owner      uuid.UUID
+}
+
+func (s *stateStorage) BlankStream() *Stream {
+	return s.blankStream()
 }
 
 func (s *stateStorage) Persist(_ context.Context, stream *Stream) error {
@@ -47,7 +53,6 @@ func (s *stateStorage) Persist(_ context.Context, stream *Stream) error {
 				prev.Version(), stream.PreviousVersion())
 		}
 	}
-	stream.version += len(stream.changes)
 	data, err := stream.MarshalBinary()
 	if err != nil {
 		return err
@@ -65,11 +70,11 @@ func (s *stateStorage) Load(_ context.Context, streamType string, streamID uuid.
 		return nil, fmt.Errorf("%s{ID:%s,Owner:%s} not found",
 			streamType, streamID, owner)
 	}
-	stream := s.blankStream()
-	if err := stream.UnmarshalBinary(rawData); err != nil {
+	blankStream := s.blankStream()
+	if err := blankStream.UnmarshalBinary(rawData); err != nil {
 		return nil, err
 	}
-	return stream, nil
+	return blankStream, nil
 }
 
 func (s *stateStorage) ConfirmVersion(ctx context.Context, version int) error {

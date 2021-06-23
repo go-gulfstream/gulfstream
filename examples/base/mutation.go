@@ -26,14 +26,4 @@ func mount(mutation *stream.Mutation) {
 			})
 			return nil, nil
 		}), stream.OnlyCreateMode())
-
-	mutation.FromCommand("setupShopID",
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
-			return nil, nil
-		}))
-
-	mutation.FromCommand("activateOrder",
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
-			return nil, nil
-		}))
 }

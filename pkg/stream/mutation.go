@@ -37,7 +37,6 @@ type Mutation struct {
 	publisher          Publisher
 	commandControllers map[string]*commandController
 	eventControllers   map[string]*eventController
-	newStream          func() *Stream
 	blacklistOfEvents  []string
 }
 
@@ -45,13 +44,11 @@ func NewMutation(
 	streamName string,
 	storage Storage,
 	publisher Publisher,
-	newStream func() *Stream,
 ) *Mutation {
 	return &Mutation{
 		streamName:         streamName,
 		storage:            storage,
 		publisher:          publisher,
-		newStream:          newStream,
 		commandControllers: make(map[string]*commandController),
 		eventControllers:   make(map[string]*eventController),
 		blacklistOfEvents:  []string{},
@@ -100,10 +97,10 @@ func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*comm
 	var stream *Stream
 	var err error
 	if cc.assignNew {
-		stream = m.newStream()
+		stream = m.storage.BlankStream()
 		// replace stream id from command if needed.
-		if cmd.ID() != uuid.Nil {
-			stream.id = cmd.ID()
+		if cmd.StreamID() != uuid.Nil {
+			stream.id = cmd.StreamID()
 		}
 		// replace owner from command if needed.
 		if cmd.Owner() != uuid.Nil {

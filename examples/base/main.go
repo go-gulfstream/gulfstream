@@ -18,7 +18,7 @@ var owner = uuid.New()
 var streamID = uuid.New()
 
 func main() {
-	storage := stream.NewStorage()
+	storage := stream.NewStorage(blankStream)
 
 	ctx := context.Background()
 
@@ -43,7 +43,6 @@ func main() {
 		orderStreamName,
 		storage,
 		eventBus,
-		blankStream,
 	)
 
 	mount(mutation)
@@ -60,7 +59,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	<-time.After(3 * time.Second)
+	currentStream, err := storage.Load(ctx, "order", streamID, owner)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("currentStream: %v\n", currentStream.State().(*order))
+
+	<-time.After(2 * time.Second)
 
 }
 
