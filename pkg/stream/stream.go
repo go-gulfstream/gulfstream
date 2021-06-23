@@ -2,6 +2,7 @@ package stream
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
@@ -9,24 +10,30 @@ import (
 )
 
 type Stream struct {
-	id      uuid.UUID
-	state   State
-	version int
-	name    string
-	owner   uuid.UUID
-	changes []*event.Event
+	id        uuid.UUID
+	owner     uuid.UUID
+	name      string
+	version   int
+	updatedAt int64
+	state     State
+	changes   []*event.Event
 }
 
-func New(name string, id uuid.UUID, owner uuid.UUID, state State) *Stream {
-	rv := reflect.ValueOf(state)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		panic("stream: New(non-pointer " + rv.String() + ")")
-	}
+func New(name string, id uuid.UUID, owner uuid.UUID, initState State) *Stream {
+	checkStatePtr(initState)
 	return &Stream{
 		id:      id,
-		state:   state,
+		state:   initState,
 		name:    name,
 		owner:   owner,
+		version: -1,
+	}
+}
+
+func Blank(initState State) *Stream {
+	checkStatePtr(initState)
+	return &Stream{
+		state:   initState,
 		version: -1,
 	}
 }
@@ -63,14 +70,26 @@ func (s *Stream) PreviousVersion() int {
 	return s.version
 }
 
+func (s *Stream) Unix() int64 {
+	return s.updatedAt
+}
+
 func (s *Stream) Mutate(eventName string, payload interface{}) {
 	s.version++
 	e := event.NewEvent(eventName, s.name, s.id, s.owner, s.version, payload)
 	s.state.Mutate(e)
 	s.changes = append(s.changes, e)
+	s.updatedAt = time.Now().Unix()
 }
 
 func RestoreFromEvent(s *Stream, event *event.Event) {
 	s.state.Mutate(event)
 	s.version = event.Version()
+}
+
+func checkStatePtr(state State) {
+	rv := reflect.ValueOf(state)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		panic("stream: New(non-pointer " + rv.String() + ")")
+	}
 }
