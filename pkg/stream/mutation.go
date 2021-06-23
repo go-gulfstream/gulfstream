@@ -3,7 +3,8 @@ package stream
 import (
 	"context"
 	"fmt"
-	"log"
+
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
@@ -17,7 +18,7 @@ type CommandController interface {
 }
 
 type EventController interface {
-	StreamIDFromEvent(*event.Event) uuid.UUID
+	StreamIDsFromEvent(*event.Event) []uuid.UUID
 	EventSink(context.Context, *Stream, *event.Event) error
 }
 
@@ -128,12 +129,8 @@ func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*comm
 		return nil, err
 	}
 	if err := m.publisher.Publish(ctx, stream.changes); err != nil {
-		return nil, err
+		return nil, multierror.Append(err, m.storage.MarkUnpublished(ctx, stream))
 	}
-	if err := m.storage.ConfirmVersion(ctx, stream); err != nil {
-		return nil, err
-	}
-	log.Println("version", stream.Version())
 	stream.ClearChanges()
 	return r, err
 }
@@ -161,35 +158,28 @@ func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
 		return nil
 	}
 
-	streamID := ec.controller.StreamIDFromEvent(e)
-	if streamID == uuid.Nil {
-		return fmt.Errorf("unknown %s{%v}", m.streamName, streamID)
-	}
-	stream, err := m.storage.Load(ctx,
-		m.streamName,
-		streamID,
-		e.Owner(),
-	)
-	if err != nil {
-		return err
-	}
-	if err := ec.controller.EventSink(ctx, stream, e); err != nil {
-		return err
-	}
-	if len(stream.changes) == 0 {
+	streamIDs := ec.controller.StreamIDsFromEvent(e)
+	if len(streamIDs) == 0 {
 		return nil
 	}
-	if err := m.storage.Persist(ctx, stream); err != nil {
-		return err
-	}
-	if err := m.publisher.Publish(ctx, stream.Changes()); err != nil {
-		return err
-	}
-	if err := m.storage.ConfirmVersion(ctx, stream); err != nil {
-		return err
-	}
-	stream.ClearChanges()
-	return err
+
+	return m.storage.Walk(ctx, m.streamName, streamIDs, e.Owner(),
+		func(s *Stream) error {
+			if err := ec.controller.EventSink(ctx, s, e); err != nil {
+				return err
+			}
+			if len(s.Changes()) == 0 {
+				return nil
+			}
+			if err := m.storage.Persist(ctx, s); err != nil {
+				return err
+			}
+			if err := m.publisher.Publish(ctx, s.Changes()); err != nil {
+				return multierror.Append(err, m.storage.MarkUnpublished(ctx, s))
+			}
+			s.ClearChanges()
+			return nil
+		})
 }
 
 func CreateMode() CommandControllerOption {

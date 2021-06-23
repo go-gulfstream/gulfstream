@@ -12,8 +12,8 @@ type Storage interface {
 	BlankStream() *Stream
 	Persist(ctx context.Context, s *Stream) error
 	Load(ctx context.Context, streamName string, streamID uuid.UUID, owner uuid.UUID) (*Stream, error)
-	ConfirmVersion(ctx context.Context, s *Stream) error
-	LatestConfirmedVersion(ctx context.Context, streamName string, streamID uuid.UUID, owner uuid.UUID) (int, error)
+	MarkUnpublished(ctx context.Context, s *Stream) error
+	Walk(ctx context.Context, streamName string, streams []uuid.UUID, owner uuid.UUID, iter func(*Stream) error) error
 }
 
 func NewStorage(newStream func() *Stream) Storage {
@@ -81,7 +81,7 @@ func (s *stateStorage) Load(_ context.Context, streamName string, streamID uuid.
 	return blankStream, nil
 }
 
-func (s *stateStorage) ConfirmVersion(ctx context.Context, cur *Stream) error {
+func (s *stateStorage) MarkUnpublished(ctx context.Context, cur *Stream) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	k := key{streamType: cur.Name(), owner: cur.Owner(), streamID: cur.ID()}
@@ -89,14 +89,22 @@ func (s *stateStorage) ConfirmVersion(ctx context.Context, cur *Stream) error {
 	return nil
 }
 
-func (s *stateStorage) LatestConfirmedVersion(_ context.Context, streamName string, streamID uuid.UUID, owner uuid.UUID) (int, error) {
+func (s *stateStorage) Walk(_ context.Context, streamName string, streams []uuid.UUID, owner uuid.UUID, iter func(*Stream) error) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	k := key{streamType: streamName, owner: owner, streamID: streamID}
-	ver, found := s.versions[k]
-	if !found {
-		return -1, fmt.Errorf("%s{StreamID:%s, Owner:%s} not found",
-			streamName, streamID, owner)
+	var k key
+	for _, streamID := range streams {
+		k = key{streamType: streamName, owner: owner, streamID: streamID}
+		rawData, found := s.data[k]
+		if !found {
+			return fmt.Errorf("%s{StreamID:%s, Owner:%s} not found",
+				streamName, streamID, owner)
+		}
+		blankStream := s.blankStream()
+		if err := blankStream.UnmarshalBinary(rawData); err != nil {
+			return err
+		}
+		return iter(blankStream)
 	}
-	return ver, nil
+	return nil
 }
