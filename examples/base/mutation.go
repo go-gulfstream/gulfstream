@@ -10,7 +10,7 @@ import (
 
 func mount(mutation *stream.Mutation, idx *someLocalIndexInMem) {
 	mutation.FromCommand(addToCartCommand,
-		newAddToCartController(idx), stream.Create())
+		newAddToCartController(idx), stream.CreateMode())
 
 	mutation.FromCommand(activateCommand,
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, command *command.Command) (*command.Reply, error) {

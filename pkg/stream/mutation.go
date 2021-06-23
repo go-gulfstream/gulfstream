@@ -93,7 +93,7 @@ func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*comm
 	}
 	cc, found := m.commandControllers[cmd.Name()]
 	if !found {
-		return nil, fmt.Errorf("controller %s for command not found", cmd.Name())
+		return nil, fmt.Errorf("mutation controller for command %s not found", cmd.Name())
 	}
 	var stream *Stream
 	var err error
@@ -192,7 +192,7 @@ func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
 	return err
 }
 
-func Create() CommandControllerOption {
+func CreateMode() CommandControllerOption {
 	return func(ctrl *commandController) {
 		ctrl.assignNew = true
 	}
