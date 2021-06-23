@@ -25,13 +25,45 @@ type Subscriber interface {
 }
 
 type EventHandler interface {
-	Match(streamName string, eventName string) bool
+	Match(eventName string) bool
 	Handle(context.Context, *event.Event) error
 	Rollback(context.Context, *event.Event) error
 }
 
 type EventErrorHandler interface {
 	HandleError(ctx context.Context, e *event.Event, err error)
+}
+
+type eventHandlerFunc struct {
+	handler         func(context.Context, *event.Event) error
+	rollbackHandler func(context.Context, *event.Event) error
+	eventName       string
+}
+
+func (fn eventHandlerFunc) Match(eventName string) bool {
+	return eventName == fn.eventName
+}
+
+func (fn eventHandlerFunc) Handle(ctx context.Context, e *event.Event) error {
+	if fn.handler == nil {
+		return nil
+	}
+	return fn.handler(ctx, e)
+}
+
+func (fn eventHandlerFunc) Rollback(ctx context.Context, e *event.Event) error {
+	if fn.rollbackHandler == nil {
+		return nil
+	}
+	return fn.rollbackHandler(ctx, e)
+}
+
+func EventHandlerFunc(eventName string, handler, rollbackHandler func(context.Context, *event.Event) error) EventHandler {
+	return eventHandlerFunc{
+		handler:         handler,
+		rollbackHandler: rollbackHandler,
+		eventName:       eventName,
+	}
 }
 
 type EventBus struct {
@@ -186,7 +218,7 @@ func (ch *channel) listenPartition(ctx context.Context, pn int, channel chan *ev
 		case e := <-channel:
 			rollback := -1
 			for i, recv := range ch.recv {
-				if !recv.Match(e.StreamName(), e.Name()) {
+				if !recv.Match(e.Name()) {
 					continue
 				}
 				if err := recv.Handle(ctx, e); err != nil {
@@ -200,7 +232,7 @@ func (ch *channel) listenPartition(ctx context.Context, pn int, channel chan *ev
 			if rollback >= 0 {
 				for i := rollback; i >= 0; i-- {
 					recv := ch.recv[i]
-					if !recv.Match(e.StreamName(), e.Name()) {
+					if !recv.Match(e.Name()) {
 						continue
 					}
 					if err := recv.Rollback(ctx, e); err != nil {

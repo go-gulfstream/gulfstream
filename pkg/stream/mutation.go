@@ -184,7 +184,7 @@ func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
 	return err
 }
 
-func Create() CommandControllerOption {
+func OnlyCreateMode() CommandControllerOption {
 	return func(ctrl *commandController) {
 		ctrl.assignNew = true
 	}

@@ -49,6 +49,10 @@ func (e *Event) Version() int {
 	return e.version
 }
 
+func (e *Event) Payload() interface{} {
+	return e.payload
+}
+
 func (e *Event) Name() string {
 	return e.name
 }
