@@ -15,6 +15,7 @@ import (
 const defaultClientTimeout = 15 * time.Second
 
 type ClientResponseFunc func(w *http.Response)
+type ClientRequestFunc func(r *http.Request, c *command.Command)
 
 type Doer interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -24,8 +25,9 @@ type Client struct {
 	endpoint     string
 	client       Doer
 	commandCodec *command.Codec
-	requestFunc  []RequestFunc
+	requestFunc  []ClientRequestFunc
 	responseFunc []ClientResponseFunc
+	contextFunc  []ContextFunc
 }
 
 type ClientOption func(*Client)
@@ -56,9 +58,15 @@ func WithClientCodec(c *command.Codec) ClientOption {
 	}
 }
 
-func WithClientRequestFunc(fn RequestFunc) ClientOption {
+func WithClientRequestFunc(fn ClientRequestFunc) ClientOption {
 	return func(cli *Client) {
 		cli.requestFunc = append(cli.requestFunc, fn)
+	}
+}
+
+func WithClientContextFunc(fn ContextFunc) ClientOption {
+	return func(cli *Client) {
+		cli.contextFunc = append(cli.contextFunc, fn)
 	}
 }
 
@@ -73,12 +81,15 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 	if err != nil {
 		return nil, err
 	}
+	for _, ctxFunc := range c.contextFunc {
+		ctx = ctxFunc(ctx)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
 	for _, reqFunc := range c.requestFunc {
-		ctx = reqFunc(ctx, req)
+		reqFunc(req, cmd)
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -88,7 +99,7 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 		respFunc(resp)
 	}
 	rawResp, err := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode == http.StatusInternalServerError {
+	if resp.StatusCode != http.StatusOK {
 		return nil, c.decodeError(rawResp)
 	}
 	reply := new(command.Reply)

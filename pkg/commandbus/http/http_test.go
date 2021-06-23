@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -17,10 +18,7 @@ import (
 )
 
 func TestClientServer(t *testing.T) {
-	storage := stream.NewStorage(func() *stream.Stream {
-		return stream.Blank(&state{One: "one"})
-	})
-	mutation := stream.NewMutation("order", storage, mockPublisher{})
+	mutation := newMutation()
 	mutation.FromCommand("action",
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
@@ -35,6 +33,52 @@ func TestClientServer(t *testing.T) {
 	assert.Equal(t, 12, reply.StreamVersion())
 	assert.Equal(t, cmd.ID(), reply.Command())
 	assert.Nil(t, reply.Err())
+}
+
+func TestServerMiddleware(t *testing.T) {
+	validOwnerID := uuid.New()
+	invalidOwnerID := uuid.New()
+	mutation := newMutation()
+	mutation.FromCommand("action",
+		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
+			return c.ReplyOk(12), nil
+		}), stream.CreateMode())
+	httpServer := NewServer(mutation)
+	middleware := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		owner := r.Header.Get("X-Owner")
+		if owner != validOwnerID.String() {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("forbidden"))
+		} else {
+			httpServer.ServeHTTP(w, r)
+		}
+	})
+	srv := httptest.NewServer(middleware)
+	defer srv.Close()
+	httpClient := NewClient(srv.URL,
+		WithClientRequestFunc(func(r *http.Request, c *command.Command) {
+			r.Header.Set("X-Owner", c.Owner().String())
+		}))
+
+	// valid owner
+	cmd := command.New("action", "order", uuid.New(), validOwnerID, nil)
+	reply, err := httpClient.CommandSink(context.Background(), cmd)
+	assert.NoError(t, err)
+	assert.Equal(t, reply.Command(), cmd.ID())
+
+	// invalid owner
+	cmd = command.New("action", "order", uuid.New(), invalidOwnerID, nil)
+	reply, err = httpClient.CommandSink(context.Background(), cmd)
+	assert.Error(t, err)
+	assert.Contains(t, "forbidden", err.Error())
+	assert.Nil(t, reply)
+}
+
+func newMutation() *stream.Mutation {
+	storage := stream.NewStorage(func() *stream.Stream {
+		return stream.Blank(&state{One: "one"})
+	})
+	return stream.NewMutation("order", storage, mockPublisher{})
 }
 
 type state struct {

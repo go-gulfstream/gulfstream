@@ -10,14 +10,16 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/commandbus"
 )
 
-type RequestFunc func(ctx context.Context, r *http.Request) context.Context
-type ServerResponseFunc func(w *http.ResponseWriter)
+type ServerRequestFunc func(r *http.Request)
+type ServerResponseFunc func(w http.ResponseWriter)
+type ContextFunc func(ctx context.Context) context.Context
 
 type Server struct {
 	mutation     commandbus.CommandBus
 	commandCodec *command.Codec
-	requestFunc  []RequestFunc
+	requestFunc  []ServerRequestFunc
 	responseFunc []ServerResponseFunc
+	contextFunc  []ContextFunc
 }
 
 func NewServer(
@@ -25,7 +27,7 @@ func NewServer(
 ) *Server {
 	return &Server{
 		mutation:     mutation,
-		requestFunc:  []RequestFunc{},
+		requestFunc:  []ServerRequestFunc{},
 		responseFunc: []ServerResponseFunc{},
 	}
 }
@@ -38,7 +40,7 @@ func WithServerCodec(c *command.Codec) ServerOption {
 	}
 }
 
-func WithServerRequestFunc(fn RequestFunc) ServerOption {
+func WithServerRequestFunc(fn ServerRequestFunc) ServerOption {
 	return func(srv *Server) {
 		srv.requestFunc = append(srv.requestFunc, fn)
 	}
@@ -50,12 +52,22 @@ func WithServerResponseFunc(fn ServerResponseFunc) ServerOption {
 	}
 }
 
+func WithServerContextFunc(fn ContextFunc) ServerOption {
+	return func(srv *Server) {
+		srv.contextFunc = append(srv.contextFunc, fn)
+	}
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
+	for _, ctxFunc := range s.contextFunc {
+		ctx = ctxFunc(ctx)
+	}
+
 	for _, reqFunc := range s.requestFunc {
-		ctx = reqFunc(ctx, r)
+		reqFunc(r)
 	}
 
 	data, err := ioutil.ReadAll(r.Body)
@@ -82,7 +94,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, respFunc := range s.responseFunc {
-		respFunc(&w)
+		respFunc(w)
 	}
 	_, _ = w.Write(rawReply)
 }
