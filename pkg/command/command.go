@@ -34,12 +34,12 @@ func New(
 	}
 }
 
-func (c *Command) ReplyOk() *Reply {
-	return &Reply{}
+func (c *Command) ReplyOk(version int) *Reply {
+	return newReply(c.id, version, nil)
 }
 
-func (c *Command) ReplyErr() *Reply {
-	return &Reply{}
+func (c *Command) ReplyErr(err error) *Reply {
+	return newReply(c.id, 0, err)
 }
 
 func (c *Command) ID() uuid.UUID {

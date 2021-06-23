@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	magicNumber   = uint16(121)
-	containerSize = int(unsafe.Sizeof(Command{})) - 24
+	commandMagicNumber = uint16(121)
+	replyMagicNumber   = uint16(122)
+	containerSize      = int(unsafe.Sizeof(Command{})) - 24
 )
 
 var (
@@ -95,7 +96,7 @@ func (c *Codec) encodePayload(command *Command) ([]byte, error) {
 }
 
 func (c *Codec) encodeContainer(command *Command, payload []byte) ([]byte, error) {
-	w := newWriter(command, payload)
+	w := newCommandWriter(command, payload)
 	if err := util.ErrOneOf(
 		w.writeMagicNumber,
 		w.writePayloadSize,
@@ -115,7 +116,7 @@ func (c *Codec) encodeContainer(command *Command, payload []byte) ([]byte, error
 }
 
 func (c *Codec) decodeContainer(data []byte) (*Command, []byte, error) {
-	reader := newReader(data)
+	reader := newCommandReader(data)
 	reader.container = new(Command)
 	if err := util.ErrOneOf(
 		reader.checkMagicNumber,
@@ -213,66 +214,66 @@ func Decode(data []byte) (*Command, error) {
 	return defaultCodec.Decode(data)
 }
 
-type writer struct {
+type commandWriter struct {
 	buf       *bytes.Buffer
 	prev      uintptr
 	container *Command
 	payload   []byte
 }
 
-func newWriter(c *Command, payload []byte) *writer {
-	return &writer{
+func newCommandWriter(c *Command, payload []byte) *commandWriter {
+	return &commandWriter{
 		buf:       bytes.NewBuffer(nil),
 		container: c,
 		payload:   payload,
 	}
 }
 
-func (w *writer) writeMagicNumber() error {
-	return binary.Write(w.buf, binary.LittleEndian, magicNumber)
+func (w *commandWriter) writeMagicNumber() error {
+	return binary.Write(w.buf, binary.LittleEndian, commandMagicNumber)
 }
 
-func (w *writer) writePayloadSize() error {
+func (w *commandWriter) writePayloadSize() error {
 	return binary.Write(w.buf, binary.LittleEndian, uint32(len(w.payload)))
 }
 
-func (w *writer) writeNameSize() error {
+func (w *commandWriter) writeNameSize() error {
 	return binary.Write(w.buf, binary.LittleEndian, uint32(len(w.container.name)))
 }
 
-func (w *writer) writeStreamSize() error {
+func (w *commandWriter) writeStreamSize() error {
 	return binary.Write(w.buf, binary.LittleEndian, uint32(len(w.container.streamName)))
 }
 
-func (w *writer) writeID() error {
+func (w *commandWriter) writeID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.id)
 }
 
-func (w *writer) writeStreamID() error {
+func (w *commandWriter) writeStreamID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.streamID)
 }
 
-func (w *writer) writeOwnerID() error {
+func (w *commandWriter) writeOwnerID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.owner)
 }
 
-func (w *writer) writeName() error {
+func (w *commandWriter) writeName() error {
 	return binary.Write(w.buf, binary.LittleEndian, []byte(w.container.name))
 }
 
-func (w *writer) writeStreamName() error {
+func (w *commandWriter) writeStreamName() error {
 	return binary.Write(w.buf, binary.LittleEndian, []byte(w.container.streamName))
 }
 
-func (w *writer) writeCreatedAt() error {
+func (w *commandWriter) writeCreatedAt() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.createdAt)
 }
 
-func (w *writer) writePayload() error {
+func (w *commandWriter) writePayload() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.payload)
 }
 
-type reader struct {
+type commandReader struct {
 	reader      *bytes.Reader
 	data        []byte
 	prev        uintptr
@@ -282,66 +283,66 @@ type reader struct {
 	container   *Command
 }
 
-func newReader(data []byte) *reader {
-	return &reader{
+func newCommandReader(data []byte) *commandReader {
+	return &commandReader{
 		reader: bytes.NewReader(data),
 		data:   data,
 	}
 }
 
-func (r *reader) next(offset uintptr) {
+func (r *commandReader) next(offset uintptr) {
 	r.reader.Reset(r.data[r.prev : r.prev+offset])
 	r.prev += offset
 }
 
-func (r *reader) checkMagicNumber() error {
-	r.next(unsafe.Sizeof(magicNumber))
+func (r *commandReader) checkMagicNumber() error {
+	r.next(unsafe.Sizeof(commandMagicNumber))
 	var val uint16
 	if err := binary.Read(r.reader, binary.LittleEndian, &val); err != nil {
 		return err
 	}
-	if val != magicNumber {
+	if val != commandMagicNumber {
 		return ErrInvalidInputData
 	}
 	return nil
 }
 
-func (r *reader) readNameSize() error {
+func (r *commandReader) readNameSize() error {
 	r.next(unsafe.Sizeof(r.nameSize))
 	return binary.Read(r.reader, binary.LittleEndian, &r.nameSize)
 }
 
-func (r *reader) readStreamSize() error {
+func (r *commandReader) readStreamSize() error {
 	r.next(unsafe.Sizeof(r.streamSize))
 	return binary.Read(r.reader, binary.LittleEndian, &r.streamSize)
 }
 
-func (r *reader) readPayloadSize() error {
+func (r *commandReader) readPayloadSize() error {
 	r.next(unsafe.Sizeof(r.payloadSize))
 	return binary.Read(r.reader, binary.LittleEndian, &r.payloadSize)
 }
 
-func (r *reader) readID() error {
+func (r *commandReader) readID() error {
 	r.next(unsafe.Sizeof(r.container.id))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.id)
 }
 
-func (r *reader) readStreamID() error {
+func (r *commandReader) readStreamID() error {
 	r.next(unsafe.Sizeof(r.container.streamID))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.streamID)
 }
 
-func (r *reader) readOwnerID() error {
+func (r *commandReader) readOwnerID() error {
 	r.next(unsafe.Sizeof(r.container.owner))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.owner)
 }
 
-func (r *reader) readCreatedAt() error {
+func (r *commandReader) readCreatedAt() error {
 	r.next(unsafe.Sizeof(r.container.createdAt))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.createdAt)
 }
 
-func (r *reader) readName() error {
+func (r *commandReader) readName() error {
 	r.next(uintptr(r.nameSize))
 	v := make([]byte, r.nameSize)
 	if err := binary.Read(r.reader, binary.LittleEndian, &v); err != nil {
@@ -351,7 +352,7 @@ func (r *reader) readName() error {
 	return nil
 }
 
-func (r *reader) readStreamName() error {
+func (r *commandReader) readStreamName() error {
 	r.next(uintptr(r.streamSize))
 	v := make([]byte, r.streamSize)
 	if err := binary.Read(r.reader, binary.LittleEndian, &v); err != nil {
@@ -361,7 +362,7 @@ func (r *reader) readStreamName() error {
 	return nil
 }
 
-func (r *reader) readPayload() ([]byte, error) {
+func (r *commandReader) readPayload() ([]byte, error) {
 	r.next(uintptr(r.payloadSize))
 	b := make([]byte, r.payloadSize)
 	if err := binary.Read(r.reader, binary.LittleEndian, &b); err != nil {

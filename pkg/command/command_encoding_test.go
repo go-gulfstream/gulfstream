@@ -14,7 +14,7 @@ import (
 
 func TestCodec_Decode(t *testing.T) {
 	id := uuid.New()
-	buf := mockContainer(t, magicNumber, id, []byte(""))
+	buf := mockContainer(t, commandMagicNumber, id, []byte(""))
 	codec := NewCodec()
 	command, err := codec.Decode(buf.Bytes())
 	assert.NoError(t, err)
