@@ -7,23 +7,44 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/stream"
 )
 
-func mount(mutation *stream.Mutation) {
-	mutation.FromCommand("addToCart",
+func mount(mutation *stream.Mutation, idx *someLocalIndexInMem) {
+	mutation.FromCommand(addToCartCommand,
+		newAddToCartController(idx), stream.Create())
+
+	mutation.FromCommand(activateCommand,
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, command *command.Command) (*command.Reply, error) {
-			payload := command.Payload().(*addToCart)
-			if payload.Price == 0 {
-				return command.ReplyErr(), nil
-			}
-			prevState := s.State().(*order)
-			if prevState.Total > 30 {
-				return command.ReplyErr(), nil
-			}
-			s.Mutate("addedToCart", addedToCart{
-				ShopID: payload.ShopID,
-				Name:   payload.Name,
-				Price:  payload.Price,
-				Total:  prevState.Total + 1,
-			})
+			s.Mutate(activatedEvent, nil)
 			return nil, nil
-		}), stream.OnlyCreateMode())
+		}))
+}
+
+type addToCartController struct {
+	index *someLocalIndexInMem
+}
+
+func newAddToCartController(
+	idx *someLocalIndexInMem,
+) *addToCartController {
+	return &addToCartController{
+		index: idx,
+	}
+}
+
+func (c *addToCartController) CommandSink(_ context.Context, ss *stream.Stream, cmd *command.Command) (*command.Reply, error) {
+	someIndex := c.index.Load()
+	if someIndex > 100 {
+		return cmd.ReplyErr(), nil
+	}
+	payload := cmd.Payload().(*addToCart)
+	if payload.Price == 0 {
+		return cmd.ReplyErr(), nil
+	}
+	prevState := ss.State().(*order)
+	ss.Mutate(addedToCartEvent, addedToCart{
+		ShopID: payload.ShopID,
+		Name:   payload.Name,
+		Price:  payload.Price,
+		Total:  prevState.Total + 1,
+	})
+	return cmd.ReplyOk(), nil
 }

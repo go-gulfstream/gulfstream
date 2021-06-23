@@ -5,16 +5,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	addToCartCommand = "addToCart"
+	activateCommand  = "activate"
+)
+
 type addToCart struct {
 	ShopID uuid.UUID
 	Name   string
 	Price  float64
 }
 
-type setupShopID struct {
-	ShopID uuid.UUID
+func newAddToCartCommand(p *addToCart) *command.Command {
+	return command.New(addToCartCommand, orderStream, streamID, owner, p)
 }
 
-func newAddToCartCommand(p *addToCart) *command.Command {
-	return command.New("addToCart", "order", streamID, owner, p)
+func newActivateOrderCommand() *command.Command {
+	return command.New(activateCommand, orderStream, streamID, owner, nil)
 }

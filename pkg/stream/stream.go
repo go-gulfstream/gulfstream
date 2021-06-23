@@ -20,18 +20,17 @@ type Stream struct {
 }
 
 func New(name string, id uuid.UUID, owner uuid.UUID, initState State) *Stream {
-	checkStatePtr(initState)
+	checkPtr(initState)
 	return &Stream{
-		id:      id,
-		state:   initState,
-		name:    name,
-		owner:   owner,
-		version: -1,
+		id:    id,
+		state: initState,
+		name:  name,
+		owner: owner,
 	}
 }
 
 func Blank(initState State) *Stream {
-	checkStatePtr(initState)
+	checkPtr(initState)
 	return &Stream{
 		state:   initState,
 		version: -1,
@@ -75,8 +74,7 @@ func (s *Stream) Unix() int64 {
 }
 
 func (s *Stream) Mutate(eventName string, payload interface{}) {
-	s.version++
-	e := event.NewEvent(eventName, s.name, s.id, s.owner, s.version, payload)
+	e := event.NewEvent(eventName, s.name, s.id, s.owner, s.version+1, payload)
 	s.state.Mutate(e)
 	s.changes = append(s.changes, e)
 	s.updatedAt = time.Now().Unix()
@@ -87,7 +85,7 @@ func RestoreFromEvent(s *Stream, event *event.Event) {
 	s.version = event.Version()
 }
 
-func checkStatePtr(state State) {
+func checkPtr(state State) {
 	rv := reflect.ValueOf(state)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		panic("stream: New(non-pointer " + rv.String() + ")")

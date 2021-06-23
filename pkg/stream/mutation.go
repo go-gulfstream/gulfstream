@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
@@ -129,9 +130,10 @@ func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*comm
 	if err := m.publisher.Publish(ctx, stream.changes); err != nil {
 		return nil, err
 	}
-	if err := m.storage.ConfirmVersion(ctx, stream.Version()); err != nil {
+	if err := m.storage.ConfirmVersion(ctx, stream); err != nil {
 		return nil, err
 	}
+	log.Println("version", stream.Version())
 	stream.ClearChanges()
 	return r, err
 }
@@ -140,16 +142,25 @@ func (m *Mutation) SetBlacklistOfEvents(names ...string) {
 	m.blacklistOfEvents = append(m.blacklistOfEvents, names...)
 }
 
+func (m *Mutation) isMySelfEvent(e *event.Event) bool {
+	for _, eventName := range m.blacklistOfEvents {
+		if e.Name() == eventName {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
 	ec, found := m.eventControllers[e.Name()]
 	if !found {
 		return fmt.Errorf("controller for event %s not found", e.Name())
 	}
-	for _, eventName := range m.blacklistOfEvents {
-		if e.Name() == eventName {
-			return nil
-		}
+
+	if m.isMySelfEvent(e) {
+		return nil
 	}
+
 	streamID := ec.controller.StreamIDFromEvent(e)
 	if streamID == uuid.Nil {
 		return fmt.Errorf("unknown %s{%v}", m.streamName, streamID)
@@ -174,14 +185,14 @@ func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
 	if err := m.publisher.Publish(ctx, stream.Changes()); err != nil {
 		return err
 	}
-	if err := m.storage.ConfirmVersion(ctx, stream.Version()); err != nil {
+	if err := m.storage.ConfirmVersion(ctx, stream); err != nil {
 		return err
 	}
 	stream.ClearChanges()
 	return err
 }
 
-func OnlyCreateMode() CommandControllerOption {
+func Create() CommandControllerOption {
 	return func(ctrl *commandController) {
 		ctrl.assignNew = true
 	}

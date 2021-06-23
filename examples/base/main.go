@@ -12,70 +12,76 @@ import (
 	"github.com/google/uuid"
 )
 
-const orderStreamName = "order"
-
-var owner = uuid.New()
-var streamID = uuid.New()
-
 func main() {
 	storage := stream.NewStorage(blankStream)
 
 	ctx := context.Background()
+	idx := new(someLocalIndexInMem)
 
 	eventBus := stream.NewEventBus()
-	eventBus.Subscribe(context.TODO(), "order",
-		stream.EventHandlerFunc("addedToCart",
+	eventBus.Subscribe(ctx, orderStream,
+		stream.EventHandlerFunc(addedToCartEvent,
 			func(ctx context.Context, e *event.Event) error {
+				idx.Increment()
 				fmt.Printf("event: addedToCart%v\nversion: %d\nstream: %s\n",
 					e.Payload().(addedToCart), e.Version(), e.StreamID())
 				return nil
 			}, nil),
 	)
 
+	eventBus.Subscribe(ctx, orderStream,
+		stream.EventHandlerFunc(activatedEvent,
+			func(ctx context.Context, e *event.Event) error {
+				fmt.Printf("event: activated\nversion: %d\nstream: %s\n",
+					e.Version(), e.StreamID())
+				return nil
+			}, nil),
+	)
+
 	go func() {
-		if err := eventBus.Listen(ctx); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		checkError(eventBus.Listen(ctx))
 	}()
 
 	mutation := stream.NewMutation(
-		orderStreamName,
+		orderStream,
 		storage,
 		eventBus,
 	)
 
-	mount(mutation)
+	mount(mutation, idx)
 
-	addToCartCommand := newAddToCartCommand(&addToCart{
+	addToCartCmd := newAddToCartCommand(&addToCart{
 		ShopID: owner,
 		Name:   "someProduct",
 		Price:  2.33,
 	})
+	_, err := mutation.CommandSink(ctx, addToCartCmd)
+	checkError(err)
 
-	_, err := mutation.CommandSink(ctx, addToCartCommand)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	activateCmd := newActivateOrderCommand()
+	_, err = mutation.CommandSink(ctx, activateCmd)
+	checkError(err)
 
-	currentStream, err := storage.Load(ctx, "order", streamID, owner)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	currentStream, err := storage.Load(ctx, orderStream, streamID, owner)
+	checkError(err)
 
-	fmt.Printf("currentStream: %v\n", currentStream.State().(*order))
-
+	fmt.Printf("currentStream: %s\n", currentStream.State().(*order))
 	<-time.After(2 * time.Second)
 
 }
 
 func blankStream() *stream.Stream {
 	return stream.New(
-		orderStreamName,
+		orderStream,
 		uuid.UUID{},
 		uuid.UUID{},
 		&order{},
 	)
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
