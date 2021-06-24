@@ -10,12 +10,14 @@ import (
 )
 
 type ClientRequestFunc func(metadata.MD, *command.Command)
+type ClientResponseFunc func(metadata.MD, *command.Reply)
 type ContextFunc func(ctx context.Context) context.Context
 
 type Client struct {
 	client       CommandBusClient
 	callOpts     []grpc.CallOption
 	requestFunc  []ClientRequestFunc
+	responseFunc []ClientResponseFunc
 	contextFunc  []ContextFunc
 	commandCodec *command.Codec
 }
@@ -45,6 +47,12 @@ func WithClientRequestFunc(fn ClientRequestFunc) ClientOption {
 	}
 }
 
+func WithClientResponseFunc(fn ClientResponseFunc) ClientOption {
+	return func(cli *Client) {
+		cli.responseFunc = append(cli.responseFunc, fn)
+	}
+}
+
 func WithClientCodec(c *command.Codec) ClientOption {
 	return func(cli *Client) {
 		cli.commandCodec = c
@@ -64,24 +72,31 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 	if err != nil {
 		return nil, err
 	}
+
 	for _, ctxFunc := range c.contextFunc {
 		ctx = ctxFunc(ctx)
 	}
+
 	md := metadata.MD{}
 	for _, reqFunc := range c.requestFunc {
 		reqFunc(md, cmd)
 	}
+
 	ctx = metadata.NewOutgoingContext(ctx, md)
-	resp, err := c.client.CommandSink(ctx, &Request{Data: data})
+	resp, err := c.client.CommandSink(ctx, &Request{Data: data}, c.callOpts...)
 	if err != nil {
 		return nil, err
 	}
 	if len(resp.Error) > 0 {
 		return nil, c.decodeError(resp.Error)
 	}
+
 	reply := new(command.Reply)
 	if err := reply.UnmarshalBinary(resp.Data); err != nil {
 		return nil, err
+	}
+	for _, respFunc := range c.responseFunc {
+		respFunc(md, reply)
 	}
 	return reply, nil
 }

@@ -11,6 +11,7 @@ import (
 )
 
 type ServerRequestFunc func(metadata.MD)
+type ServerErrorHandler func(err error)
 
 type Server struct {
 	UnimplementedCommandBusServer
@@ -18,6 +19,7 @@ type Server struct {
 	mutation     commandbus.CommandBus
 	contextFunc  []ContextFunc
 	requestFunc  []ServerRequestFunc
+	errorHandler []ServerErrorHandler
 }
 
 func NewServer(
@@ -54,6 +56,12 @@ func WithServerRequestFunc(fn ServerRequestFunc) ServerOption {
 func WithServerContextFunc(fn ContextFunc) ServerOption {
 	return func(srv *Server) {
 		srv.contextFunc = append(srv.contextFunc, fn)
+	}
+}
+
+func WithServerErrorHandler(fn ServerErrorHandler) ServerOption {
+	return func(srv *Server) {
+		srv.errorHandler = append(srv.errorHandler, fn)
 	}
 }
 
@@ -101,5 +109,8 @@ func (s *Server) write(b []byte) *Response {
 }
 
 func (s *Server) writeError(err error) *Response {
+	for _, errFunc := range s.errorHandler {
+		errFunc(err)
+	}
 	return &Response{Error: err.Error()}
 }

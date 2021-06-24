@@ -1,21 +1,23 @@
-package http
+package nats
 
 import (
 	"context"
-	"io/ioutil"
-	"net/http"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
-
 	"github.com/go-gulfstream/gulfstream/pkg/commandbus"
+
+	"github.com/nats-io/nats.go"
 )
 
-type ServerRequestFunc func(r *http.Request, c *command.Command)
-type ServerResponseFunc func(w http.ResponseWriter, r *command.Reply)
+const errKey = "_e"
+
+type ServerRequestFunc func(h nats.Header, c *command.Command)
+type ServerResponseFunc func(h nats.Header, r *command.Reply)
 type ContextFunc func(ctx context.Context) context.Context
-type ServerErrorHandler func(err error)
+type ServerErrorHandler func(msg *nats.Msg, err error)
 
 type Server struct {
+	subject      string
 	mutation     commandbus.CommandBus
 	commandCodec *command.Codec
 	requestFunc  []ServerRequestFunc
@@ -25,13 +27,13 @@ type Server struct {
 }
 
 func NewServer(
+	subject string,
 	mutation commandbus.CommandBus,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{
-		mutation:     mutation,
-		requestFunc:  []ServerRequestFunc{},
-		responseFunc: []ServerResponseFunc{},
+		subject:  toSubj(subject),
+		mutation: mutation,
 	}
 	for _, opt := range opts {
 		opt(srv)
@@ -71,48 +73,67 @@ func WithServerErrorHandler(fn ServerErrorHandler) ServerOption {
 	}
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithCancel(r.Context())
+func (s *Server) Listen(conn *nats.Conn) error {
+	if _, err := conn.QueueSubscribe(s.subject, s.subject, func(msg *nats.Msg) {
+		rawReply := s.handleMsg(msg)
+		if err := msg.Respond(rawReply); err != nil {
+			s.handleError(msg, err)
+		}
+	}); err != nil {
+		return err
+	}
+	if err := conn.Flush(); err != nil {
+		return err
+	}
+	return conn.LastError()
+}
+
+func (s *Server) handleMsg(msg *nats.Msg) []byte {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	for _, ctxFunc := range s.contextFunc {
 		ctx = ctxFunc(ctx)
 	}
 
-	data, err := ioutil.ReadAll(r.Body)
+	cmd, err := s.decodeCommand(msg.Data)
 	if err != nil {
-		s.writeError(w, err)
-		return
-	}
-	defer r.Body.Close()
-
-	cmd, err := s.decodeCommand(data)
-	if err != nil {
-		s.writeError(w, err)
-		return
+		return s.writeError(msg, err)
 	}
 
 	for _, reqFunc := range s.requestFunc {
-		reqFunc(r, cmd)
+		reqFunc(msg.Header, cmd)
 	}
 
 	reply, err := s.mutation.CommandSink(ctx, cmd)
 	if err != nil {
-		s.writeError(w, err)
-		return
+		return s.writeError(msg, err)
 	}
 
 	for _, respFunc := range s.responseFunc {
-		respFunc(w, reply)
+		respFunc(msg.Header, reply)
 	}
 
 	rawReply, err := reply.MarshalBinary()
 	if err != nil {
-		s.writeError(w, err)
-		return
+		return s.writeError(msg, err)
 	}
 
-	_, _ = w.Write(rawReply)
+	msg.Header.Del(errKey)
+
+	return rawReply
+}
+
+func (s *Server) handleError(msg *nats.Msg, err error) {
+	for _, errFunc := range s.errorHandler {
+		errFunc(msg, err)
+	}
+}
+
+func (s *Server) writeError(msg *nats.Msg, err error) []byte {
+	s.handleError(msg, err)
+	msg.Header.Set(errKey, errKey)
+	return []byte(err.Error())
 }
 
 func (s *Server) decodeCommand(data []byte) (*command.Command, error) {
@@ -121,12 +142,4 @@ func (s *Server) decodeCommand(data []byte) (*command.Command, error) {
 	} else {
 		return command.Decode(data)
 	}
-}
-
-func (s *Server) writeError(w http.ResponseWriter, err error) {
-	for _, errFunc := range s.errorHandler {
-		errFunc(err)
-	}
-	w.WriteHeader(http.StatusInternalServerError)
-	_, _ = w.Write([]byte(err.Error()))
 }

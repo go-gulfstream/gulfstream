@@ -1,44 +1,38 @@
-package http
+package nats
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
+	"github.com/nats-io/nats.go"
 )
 
 const defaultClientTimeout = 15 * time.Second
 
-type ClientResponseFunc func(w *http.Response, r *command.Reply)
-type ClientRequestFunc func(r *http.Request, c *command.Command)
-
-type Doer interface {
-	Do(req *http.Request) (*http.Response, error)
-}
+type ClientResponseFunc func(h nats.Header, c *command.Reply)
+type ClientRequestFunc func(h nats.Header, c *command.Command)
 
 type Client struct {
-	endpoint     string
-	client       Doer
+	subject      string
+	conn         *nats.Conn
 	commandCodec *command.Codec
 	requestFunc  []ClientRequestFunc
 	responseFunc []ClientResponseFunc
 	contextFunc  []ContextFunc
+	timeout      time.Duration
 }
 
-type ClientOption func(*Client)
-
 func NewClient(
-	addr string,
+	subject string,
+	conn *nats.Conn,
 	opts ...ClientOption,
 ) *Client {
 	c := &Client{
-		client:   &http.Client{Timeout: defaultClientTimeout},
-		endpoint: strings.TrimRight(addr, "/"),
+		subject: toSubj(subject),
+		conn:    conn,
+		timeout: defaultClientTimeout,
 	}
 	for _, f := range opts {
 		f(c)
@@ -46,15 +40,17 @@ func NewClient(
 	return c
 }
 
-func WithClientTransport(c Doer) ClientOption {
-	return func(cli *Client) {
-		cli.client = c
-	}
-}
+type ClientOption func(*Client)
 
 func WithClientCodec(c *command.Codec) ClientOption {
 	return func(cli *Client) {
 		cli.commandCodec = c
+	}
+}
+
+func WithClientTimeout(dur time.Duration) ClientOption {
+	return func(cli *Client) {
+		cli.timeout = dur
 	}
 }
 
@@ -77,45 +73,42 @@ func WithClientResponseFunc(fn ClientResponseFunc) ClientOption {
 }
 
 func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
+	if c.conn.Status() != nats.CONNECTED {
+		return nil, nats.ErrConnectionClosed
+	}
+
 	data, err := c.encodeCommand(cmd)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, ctxFunc := range c.contextFunc {
 		ctx = ctxFunc(ctx)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
+	inMsg := nats.NewMsg(c.subject)
+	inMsg.Data = data
 	for _, reqFunc := range c.requestFunc {
-		reqFunc(req, cmd)
+		reqFunc(inMsg.Header, cmd)
 	}
-
-	resp, err := c.client.Do(req)
+	outMsg, err := c.conn.RequestMsg(inMsg, c.timeout)
 	if err != nil {
-		return nil, err
+		return nil, c.conn.LastError()
 	}
-
-	rawResp, err := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return nil, c.decodeError(rawResp)
+	if outMsg.Subject != c.subject {
+		return nil, nats.ErrSubjectMismatch
+	}
+	if outMsg.Header.Get(errKey) == errKey {
+		return nil, errors.New(string(outMsg.Data))
 	}
 
 	reply := new(command.Reply)
-	if err := reply.UnmarshalBinary(rawResp); err != nil {
+	if err := reply.UnmarshalBinary(outMsg.Data); err != nil {
 		return nil, err
 	}
 	for _, respFunc := range c.responseFunc {
-		respFunc(resp, reply)
+		respFunc(outMsg.Header, reply)
 	}
 	return reply, nil
-}
-
-func (c *Client) decodeError(b []byte) error {
-	return errors.New(string(b))
 }
 
 func (c *Client) encodeCommand(cmd *command.Command) ([]byte, error) {
@@ -124,4 +117,8 @@ func (c *Client) encodeCommand(cmd *command.Command) ([]byte, error) {
 	} else {
 		return command.Encode(cmd)
 	}
+}
+
+func toSubj(s string) string {
+	return s + "-gulfstream"
 }
