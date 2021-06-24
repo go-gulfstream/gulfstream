@@ -9,10 +9,10 @@ service CommandBus {
 }
 
 message Request {
-  bytes message = 1;
+  bytes data = 1;
 }
 
 message Response {
-  bytes message = 1;
+  bytes data = 1;
   string error = 2;
 }

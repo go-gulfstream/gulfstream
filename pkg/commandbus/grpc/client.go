@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type ClientRequestFunc func(*metadata.MD)
+type ClientRequestFunc func(metadata.MD, *command.Command)
 type ContextFunc func(ctx context.Context) context.Context
 
 type Client struct {
@@ -69,12 +69,10 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 	}
 	md := metadata.MD{}
 	for _, reqFunc := range c.requestFunc {
-		reqFunc(&md)
+		reqFunc(md, cmd)
 	}
 	ctx = metadata.NewOutgoingContext(ctx, md)
-	resp, err := c.client.CommandSink(ctx, &Request{
-		Message: data,
-	})
+	resp, err := c.client.CommandSink(ctx, &Request{Data: data})
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +80,7 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 		return nil, c.decodeError(resp.Error)
 	}
 	reply := new(command.Reply)
-	if err := reply.UnmarshalBinary(resp.Message); err != nil {
+	if err := reply.UnmarshalBinary(resp.Data); err != nil {
 		return nil, err
 	}
 	return reply, nil

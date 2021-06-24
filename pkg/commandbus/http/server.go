@@ -24,12 +24,17 @@ type Server struct {
 
 func NewServer(
 	mutation commandbus.CommandBus,
+	opts ...ServerOption,
 ) *Server {
-	return &Server{
+	srv := &Server{
 		mutation:     mutation,
 		requestFunc:  []ServerRequestFunc{},
 		responseFunc: []ServerResponseFunc{},
 	}
+	for _, opt := range opts {
+		opt(srv)
+	}
+	return srv
 }
 
 type ServerOption func(*Server)

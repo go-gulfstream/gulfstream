@@ -18,17 +18,24 @@ import (
 )
 
 func TestClientServer(t *testing.T) {
+	// setup stream controllers
 	mutation := newMutation()
 	mutation.FromCommand("action",
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
+
+	// setup server side
 	httpServer := NewServer(mutation)
-	srv := httptest.NewServer(httpServer)
-	defer srv.Close()
-	httpClient := NewClient(srv.URL)
+	server := httptest.NewServer(httpServer)
+	defer server.Close()
+
+	// setup client side
+	client := NewClient(server.URL)
+
+	// request from client to server
 	cmd := command.New("action", "order", uuid.New(), uuid.New(), nil)
-	reply, err := httpClient.CommandSink(context.Background(), cmd)
+	reply, err := client.CommandSink(context.Background(), cmd)
 	assert.Nil(t, err)
 	assert.Equal(t, 12, reply.StreamVersion())
 	assert.Equal(t, cmd.ID(), reply.Command())
