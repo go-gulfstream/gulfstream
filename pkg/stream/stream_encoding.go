@@ -109,7 +109,7 @@ func (w *writer) writeName() error {
 }
 
 func (w *writer) writeVersion() error {
-	return binary.Write(w.buf, binary.LittleEndian, int64(w.container.version))
+	return binary.Write(w.buf, binary.LittleEndian, int64(w.container.Version()))
 }
 
 func (w *writer) writeUpdatedAt() error {

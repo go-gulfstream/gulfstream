@@ -24,8 +24,8 @@ func main() {
 	ctx := context.Background()
 	idx := new(someLocalIndexInMem)
 
-	eventBus := eventbus.New()
-	eventBus.Subscribe(ctx, orderStream,
+	channel := eventbus.NewChannel()
+	channel.Subscribe(ctx, orderStream,
 		eventbus.HandlerFunc(addedToCartEvent,
 			func(ctx context.Context, e *event.Event) error {
 				idx.Increment()
@@ -35,7 +35,7 @@ func main() {
 			}, nil),
 	)
 
-	eventBus.Subscribe(ctx, orderStream,
+	channel.Subscribe(ctx, orderStream,
 		eventbus.HandlerFunc(activatedEvent,
 			func(ctx context.Context, e *event.Event) error {
 				fmt.Printf("event: activated\nversion: %d\nstream: %s\n",
@@ -45,13 +45,13 @@ func main() {
 	)
 
 	go func() {
-		checkError(eventBus.Listen(ctx))
+		checkError(channel.Listen(ctx))
 	}()
 
 	mutator := stream.NewMutator(
 		orderStream,
 		streamStorage,
-		eventBus,
+		channel,
 	)
 
 	mutator.AddCommandController(addToCartCommand,

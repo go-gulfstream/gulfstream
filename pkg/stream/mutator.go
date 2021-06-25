@@ -18,7 +18,7 @@ type CommandController interface {
 }
 
 type EventController interface {
-	StreamIDsFromEvent(*event.Event) []uuid.UUID
+	PickOwners(*event.Event) []Owner
 	EventSink(context.Context, *Stream, *event.Event) error
 }
 
@@ -26,6 +26,11 @@ type ControllerFunc func(context.Context, *Stream, *command.Command) (*command.R
 
 func (fn ControllerFunc) CommandSink(ctx context.Context, s *Stream, c *command.Command) (*command.Reply, error) {
 	return fn(ctx, s, c)
+}
+
+type Owner struct {
+	StreamID uuid.UUID
+	Owner    uuid.UUID
 }
 
 type (
@@ -153,36 +158,44 @@ func (m *Mutator) isMySelfEvent(e *event.Event) bool {
 
 func (m *Mutator) EventSink(ctx context.Context, e *event.Event) error {
 	ec, found := m.eventControllers[e.Name()]
-	if !found {
-		return fmt.Errorf("controller for event %s not found", e.Name())
-	}
-
-	if m.isMySelfEvent(e) {
+	if !found || m.isMySelfEvent(e) {
 		return nil
 	}
-
-	streamIDs := ec.controller.StreamIDsFromEvent(e)
-	if len(streamIDs) == 0 {
+	owners := ec.controller.PickOwners(e)
+	if len(owners) == 0 {
 		return nil
 	}
+	for _, owner := range owners {
+		stream, err := m.storage.Load(ctx,
+			m.streamName,
+			owner.StreamID,
+			owner.Owner,
+		)
+		if err != nil {
+			return err
+		}
+		if err := m.eventSink(ctx, ec, stream, e); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	return m.storage.Walk(ctx, m.streamName, streamIDs, e.Owner(),
-		func(s *Stream) error {
-			if err := ec.controller.EventSink(ctx, s, e); err != nil {
-				return err
-			}
-			if len(s.Changes()) == 0 {
-				return nil
-			}
-			if err := m.storage.Persist(ctx, s); err != nil {
-				return err
-			}
-			if err := m.publisher.Publish(ctx, s.Changes()); err != nil {
-				return multierror.Append(err, m.storage.MarkUnpublished(ctx, s))
-			}
-			s.ClearChanges()
-			return nil
-		})
+func (m *Mutator) eventSink(ctx context.Context, ec *eventController, s *Stream, e *event.Event) error {
+	if err := ec.controller.EventSink(ctx, s, e); err != nil {
+		return err
+	}
+	if len(s.Changes()) == 0 {
+		return nil
+	}
+	if err := m.storage.Persist(ctx, s); err != nil {
+		return err
+	}
+	if err := m.publisher.Publish(ctx, s.Changes()); err != nil {
+		return multierror.Append(err, m.storage.MarkUnpublished(ctx, s))
+	}
+	s.ClearChanges()
+	return nil
 }
 
 func CreateMode() CommandControllerOption {

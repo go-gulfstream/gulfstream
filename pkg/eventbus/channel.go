@@ -49,7 +49,7 @@ func HandlerFunc(eventName string, handler, rollbackHandler func(context.Context
 	}
 }
 
-type EventBus struct {
+type Channel struct {
 	channels     map[string]*channel
 	errorHandler stream.EventErrorHandler
 	wg           *sync.WaitGroup
@@ -57,10 +57,10 @@ type EventBus struct {
 	partitions   int
 }
 
-type Option func(*EventBus)
+type Option func(*Channel)
 
-func New(o ...Option) *EventBus {
-	eb := &EventBus{
+func NewChannel(o ...Option) *Channel {
+	eb := &Channel{
 		partitions: DefaultPartitions,
 		channels:   make(map[string]*channel),
 		wg:         new(sync.WaitGroup),
@@ -71,21 +71,21 @@ func New(o ...Option) *EventBus {
 	return eb
 }
 
-func WithPartitions(n int) Option {
-	return func(eb *EventBus) {
+func WithChannelPartitions(n int) Option {
+	return func(eb *Channel) {
 		if n > MinPartitions && n <= MaxPartitions {
 			eb.partitions = n
 		}
 	}
 }
 
-func WithErrorHandler(h stream.EventErrorHandler) Option {
-	return func(eb *EventBus) {
+func WithChannelErrorHandler(h stream.EventErrorHandler) Option {
+	return func(eb *Channel) {
 		eb.errorHandler = h
 	}
 }
 
-func (b *EventBus) Publish(_ context.Context, events []*event.Event) error {
+func (b *Channel) Publish(_ context.Context, events []*event.Event) error {
 	for _, e := range events {
 		channel, ok := b.channels[e.StreamName()]
 		if !ok {
@@ -97,7 +97,7 @@ func (b *EventBus) Publish(_ context.Context, events []*event.Event) error {
 	return nil
 }
 
-func (b *EventBus) Subscribe(_ context.Context, streamName string, handlers ...stream.EventHandler) {
+func (b *Channel) Subscribe(_ context.Context, streamName string, handlers ...stream.EventHandler) {
 	channel, ok := b.channels[streamName]
 	if !ok {
 		channel = newChannel(b.partitions, streamName)
@@ -109,7 +109,7 @@ func (b *EventBus) Subscribe(_ context.Context, streamName string, handlers ...s
 	b.channels[streamName] = channel
 }
 
-func (b *EventBus) Listen(ctx context.Context) error {
+func (b *Channel) Listen(ctx context.Context) error {
 	for _, channel := range b.channels {
 		channel.setErrorHandler(b.errorHandler)
 		channel.listen(ctx)
@@ -118,7 +118,7 @@ func (b *EventBus) Listen(ctx context.Context) error {
 	return nil
 }
 
-func (b *EventBus) Close() error {
+func (b *Channel) Close() error {
 	if b.closed {
 		return nil
 	}

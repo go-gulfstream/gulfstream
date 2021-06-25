@@ -81,23 +81,3 @@ func (s *stateStorage) MarkUnpublished(ctx context.Context, cur *stream.Stream) 
 	s.versions[k] = cur.Version()
 	return nil
 }
-
-func (s *stateStorage) Walk(_ context.Context, streamName string, streams []uuid.UUID, owner uuid.UUID, iter func(*stream.Stream) error) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	var k key
-	for _, streamID := range streams {
-		k = key{streamType: streamName, owner: owner, streamID: streamID}
-		rawData, found := s.data[k]
-		if !found {
-			return fmt.Errorf("%s{StreamID:%s, Owner:%s} not found",
-				streamName, streamID, owner)
-		}
-		blankStream := s.blankStream()
-		if err := blankStream.UnmarshalBinary(rawData); err != nil {
-			return err
-		}
-		return iter(blankStream)
-	}
-	return nil
-}
