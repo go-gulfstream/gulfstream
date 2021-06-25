@@ -8,7 +8,7 @@ import (
 
 func init() {
 	err := command.AddKnownType(
-		(*CreateNewEvent)(nil),
+		(*CreateNewParty)(nil),
 		(*AddParticipant)(nil),
 	)
 	if err != nil {
@@ -16,11 +16,11 @@ func init() {
 	}
 }
 
-func (c *CreateNewEvent) MarshalBinary() ([]byte, error) {
+func (c *CreateNewParty) MarshalBinary() ([]byte, error) {
 	return json.Marshal(c)
 }
 
-func (c *CreateNewEvent) UnmarshalBinary(data []byte) error {
+func (c *CreateNewParty) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, &c)
 }
 

@@ -1,3 +1,3 @@
 package types
 
-const PartyStream = "eventstream"
+const PartyStream = "partyStream"

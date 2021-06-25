@@ -25,8 +25,8 @@ func main() {
 	svc := newService()
 
 	mutation.MountCommandController(
-		types.CreateNewEventCommand,
-		CreateNewEventController(svc),
+		types.CreateNewPartyCommand,
+		CreatePartyController(svc),
 		stream.CreateMode())
 
 	mutation.MountCommandController(

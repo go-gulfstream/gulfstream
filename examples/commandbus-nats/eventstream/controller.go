@@ -10,19 +10,19 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/stream"
 )
 
-func CreateNewEventController(m Service) stream.CommandController {
+func CreatePartyController(m Service) stream.CommandController {
 	return stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *cmd.Command) (*cmd.Reply, error) {
-		log.Println("invoke.CreateNewEventController")
-		command := c.Payload().(*types.CreateNewEvent)
+		log.Println("invoke.CreatePartyController")
+		command := c.Payload().(*types.CreateNewParty)
 		if err := command.Validate(); err != nil {
 			return c.ReplyErr(err), nil
 		}
 		currentState := s.State().(*state)
-		event, err := m.CreateNewEvent(ctx, currentState, command)
+		event, err := m.CreateParty(ctx, currentState, command)
 		if err != nil {
 			return c.ReplyErr(err), nil
 		}
-		s.Mutate(types.EventCreatedEvent, event)
+		s.Mutate(types.PartyCreatedEvent, event)
 		return c.ReplyOk(s.Version()), nil
 	})
 }

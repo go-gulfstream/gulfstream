@@ -31,7 +31,7 @@ func main() {
 	go func() {
 		for {
 			// create new party-event
-			createNewEventCmd := createNewEvent(types.CreateNewEvent{
+			createPartyCmd := createParty(types.CreateNewParty{
 				EventName: "golang fest",
 				DateTime:  time.Now().Add(time.Hour),
 				Lat:       1,
@@ -40,27 +40,27 @@ func main() {
 				Address:   "google",
 			})
 			log.Printf("[CLIENT:COMMANDSINK] id=%s, name=%s",
-				createNewEventCmd.ID(),
-				createNewEventCmd.Name(),
+				createPartyCmd.ID(),
+				createPartyCmd.Name(),
 			)
-			reply, err := commandbus.CommandSink(ctx, createNewEventCmd)
+			reply, err := commandbus.CommandSink(ctx, createPartyCmd)
 			checkError(err)
 			if reply == nil {
 				os.Exit(1)
 			}
 
 			log.Printf("[CLIENT:REPLY]=> %s stream=%s, sid=%s, owner=%s commandName=%s, v=%d\n",
-				status(reply.Command() == createNewEventCmd.ID()),
-				createNewEventCmd.StreamName(),
-				createNewEventCmd.StreamID(),
-				createNewEventCmd.Owner(),
-				createNewEventCmd.Name(),
+				status(reply.Command() == createPartyCmd.ID()),
+				createPartyCmd.StreamName(),
+				createPartyCmd.StreamID(),
+				createPartyCmd.Owner(),
+				createPartyCmd.Name(),
 				reply.StreamVersion())
 
 			// add participant
 			addParticipantCommand := addParticipant(
-				createNewEventCmd.StreamID(),
-				createNewEventCmd.Owner(),
+				createPartyCmd.StreamID(),
+				createPartyCmd.Owner(),
 				types.AddParticipant{
 					Name: "user",
 					Age:  16,
@@ -103,8 +103,8 @@ func checkError(err error) {
 	}
 }
 
-func createNewEvent(p types.CreateNewEvent) *command.Command {
-	return command.New(types.CreateNewEventCommand, types.PartyStream, uuid.New(), uuid.New(), &p)
+func createParty(p types.CreateNewParty) *command.Command {
+	return command.New(types.CreateNewPartyCommand, types.PartyStream, uuid.New(), uuid.New(), &p)
 }
 
 func addParticipant(streamID, owner uuid.UUID, p types.AddParticipant) *command.Command {

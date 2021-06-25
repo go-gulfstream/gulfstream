@@ -17,7 +17,7 @@ type state struct {
 
 func (s *state) Mutate(e *event.Event) {
 	switch payload := e.Payload().(type) {
-	case *types.EventCreated:
+	case *types.PartyCreated:
 		s.EventName = payload.EventName
 		s.DateTime = payload.DateTime
 		s.Place = place{

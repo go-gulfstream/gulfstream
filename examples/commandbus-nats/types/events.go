@@ -3,11 +3,11 @@ package types
 import "time"
 
 const (
-	EventCreatedEvent     = "EventCreated"
+	PartyCreatedEvent     = "PartyCreated"
 	ParticipantAddedEvent = "ParticipantAdded"
 )
 
-type EventCreated struct {
+type PartyCreated struct {
 	EventName string
 	DateTime  time.Time
 	Lat       float64

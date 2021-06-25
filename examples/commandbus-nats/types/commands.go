@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	CreateNewEventCommand = "CreateNewEvent"
+	CreateNewPartyCommand = "CreateNewParty"
 	AddParticipantCommand = "AddParticipant"
 )
 
-type CreateNewEvent struct {
+type CreateNewParty struct {
 	EventName      string
 	DateTime       time.Time
 	Lat            float64
@@ -20,9 +20,9 @@ type CreateNewEvent struct {
 	MaxParticipant int
 }
 
-func (c *CreateNewEvent) Validate() error {
+func (c *CreateNewParty) Validate() error {
 	if len(c.EventName) < 3 {
-		return fmt.Errorf("CreateNewEvent.Name too short")
+		return fmt.Errorf("CreateNewParty.Name too short")
 	}
 	return nil
 }

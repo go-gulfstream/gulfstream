@@ -9,7 +9,7 @@ import (
 )
 
 type Service interface {
-	CreateNewEvent(ctx context.Context, currentState *state, command *types.CreateNewEvent) (*types.EventCreated, error)
+	CreateParty(ctx context.Context, currentState *state, command *types.CreateNewParty) (*types.PartyCreated, error)
 	AddParticipant(ctx context.Context, currentState *state, command *types.AddParticipant) (*types.ParticipantAdded, error)
 }
 
@@ -20,7 +20,7 @@ func newService() Service {
 	return &service{}
 }
 
-func (m *service) CreateNewEvent(ctx context.Context, currentState *state, command *types.CreateNewEvent) (*types.EventCreated, error) {
+func (m *service) CreateParty(ctx context.Context, currentState *state, command *types.CreateNewParty) (*types.PartyCreated, error) {
 	radius := command.Radius / 2
 	if radius > 5000 {
 		return nil, fmt.Errorf("max radius exceeded")
@@ -28,7 +28,7 @@ func (m *service) CreateNewEvent(ctx context.Context, currentState *state, comma
 	if command.DateTime.IsZero() {
 		command.DateTime = time.Now().Add(10 * time.Hour)
 	}
-	return &types.EventCreated{
+	return &types.PartyCreated{
 		EventName: command.EventName,
 		DateTime:  command.DateTime,
 		Lat:       command.Lat,
