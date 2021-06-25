@@ -23,6 +23,7 @@ func main() {
 	opts := []nats.Option{nats.Name("name")}
 	conn, err := nats.Connect("nats:4222", opts...)
 	checkError(err)
+	defer conn.Close()
 
 	ctx := context.Background()
 

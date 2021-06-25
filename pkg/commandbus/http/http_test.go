@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-gulfstream/gulfstream/pkg/storage"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
@@ -20,8 +22,8 @@ import (
 func TestClientServer(t *testing.T) {
 	// setup stream controllers
 	mutation := newMutation()
-	mutation.MountCommandController("action",
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
+	mutation.AddCommandController("action",
+		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
 
@@ -46,8 +48,8 @@ func TestServerMiddleware(t *testing.T) {
 	validOwnerID := uuid.New()
 	invalidOwnerID := uuid.New()
 	mutation := newMutation()
-	mutation.MountCommandController("action",
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
+	mutation.AddCommandController("action",
+		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
 	httpServer := NewServer(mutation)
@@ -81,11 +83,11 @@ func TestServerMiddleware(t *testing.T) {
 	assert.Nil(t, reply)
 }
 
-func newMutation() *stream.Mutation {
-	storage := stream.NewStorage(func() *stream.Stream {
-		return stream.Blank(&state{One: "one"})
+func newMutation() *stream.Mutator {
+	store := storage.New(func() *stream.Stream {
+		return stream.Blank("one", &state{One: "one"})
 	})
-	return stream.NewMutation("order", storage, mockPublisher{})
+	return stream.NewMutator("order", store, mockPublisher{})
 }
 
 type state struct {

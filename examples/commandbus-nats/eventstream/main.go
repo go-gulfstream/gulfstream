@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/go-gulfstream/gulfstream/pkg/storage"
+
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
 	"github.com/go-gulfstream/gulfstream/examples/commandbus-nats/types"
@@ -19,21 +21,21 @@ import (
 )
 
 func main() {
-	storage := stream.NewStorage(blankPartyStream)
-	mutation := stream.NewMutation(types.PartyStream, storage, customPublisher{})
+	streamStorage := storage.New(blankPartyStream)
+	mutator := stream.NewMutator(types.PartyStream, streamStorage, customPublisher{})
 
-	svc := newService()
+	mutation := newMutation()
 
-	mutation.MountCommandController(
+	mutator.AddCommandController(
 		types.CreateNewPartyCommand,
-		CreatePartyController(svc),
+		CreatePartyController(mutation),
 		stream.CreateMode())
 
-	mutation.MountCommandController(
+	mutator.AddCommandController(
 		types.AddParticipantCommand,
-		AddParticipantController(svc))
+		AddParticipantController(mutation))
 
-	commandbus := commandbusnats.NewServer(types.PartyStream, mutation,
+	commandbus := commandbusnats.NewServer(types.PartyStream, mutator,
 		commandbusnats.WithServerErrorHandler(func(msg *nats.Msg, err error) {
 			log.Printf("[ERR] msg:%s, %v\n", msg.Subject, err)
 		}))
@@ -41,6 +43,7 @@ func main() {
 	opts := []nats.Option{nats.Name("name")}
 	conn, err := nats.Connect("nats:4222", opts...)
 	checkError(err)
+	defer conn.Close()
 
 	checkError(commandbus.Listen(conn))
 

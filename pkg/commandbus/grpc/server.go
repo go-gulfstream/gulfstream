@@ -15,15 +15,15 @@ type ServerErrorHandler func(err error)
 
 type Server struct {
 	UnimplementedCommandBusServer
-	commandCodec *command.Codec
-	mutation     commandbus.CommandBus
+	commandCodec command.Encoding
+	mutation     commandbus.Sinker
 	contextFunc  []ContextFunc
 	requestFunc  []ServerRequestFunc
 	errorHandler []ServerErrorHandler
 }
 
 func NewServer(
-	mutation commandbus.CommandBus,
+	mutation commandbus.Sinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{
@@ -41,7 +41,7 @@ func (s *Server) Register(grpcSrv *grpc.Server) {
 
 type ServerOption func(*Server)
 
-func WithServerCodec(c *command.Codec) ServerOption {
+func WithServerCodec(c command.Encoding) ServerOption {
 	return func(srv *Server) {
 		srv.commandCodec = c
 	}

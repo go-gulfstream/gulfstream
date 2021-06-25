@@ -81,7 +81,7 @@ func (s *Stream) Unix() int64 {
 }
 
 func (s *Stream) Mutate(eventName string, payload interface{}) {
-	e := event.NewEvent(eventName, s.name, s.id, s.owner, s.version+1, payload)
+	e := event.New(eventName, s.name, s.id, s.owner, s.version+1, payload)
 	s.state.Mutate(e)
 	s.changes = append(s.changes, e)
 	s.updatedAt = time.Now().Unix()

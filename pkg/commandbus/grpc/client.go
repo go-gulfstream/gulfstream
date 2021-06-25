@@ -19,7 +19,7 @@ type Client struct {
 	requestFunc  []ClientRequestFunc
 	responseFunc []ClientResponseFunc
 	contextFunc  []ContextFunc
-	commandCodec *command.Codec
+	commandCodec command.Encoding
 }
 
 func NewClient(
@@ -53,7 +53,7 @@ func WithClientResponseFunc(fn ClientResponseFunc) ClientOption {
 	}
 }
 
-func WithClientCodec(c *command.Codec) ClientOption {
+func WithClientCodec(c command.Encoding) ClientOption {
 	return func(cli *Client) {
 		cli.commandCodec = c
 	}

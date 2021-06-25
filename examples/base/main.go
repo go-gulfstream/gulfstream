@@ -6,6 +6,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-gulfstream/gulfstream/pkg/storage"
+
+	"github.com/go-gulfstream/gulfstream/pkg/command"
+
+	"github.com/go-gulfstream/gulfstream/pkg/eventbus"
+
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
 	"github.com/go-gulfstream/gulfstream/pkg/stream"
@@ -13,14 +19,14 @@ import (
 )
 
 func main() {
-	storage := stream.NewStorage(blankStream)
+	streamStorage := storage.New(blankStream)
 
 	ctx := context.Background()
 	idx := new(someLocalIndexInMem)
 
-	eventBus := stream.NewEventBus()
+	eventBus := eventbus.New()
 	eventBus.Subscribe(ctx, orderStream,
-		stream.EventHandlerFunc(addedToCartEvent,
+		eventbus.HandlerFunc(addedToCartEvent,
 			func(ctx context.Context, e *event.Event) error {
 				idx.Increment()
 				fmt.Printf("event: addedToCart%v\nversion: %d\nstream: %s\n",
@@ -30,7 +36,7 @@ func main() {
 	)
 
 	eventBus.Subscribe(ctx, orderStream,
-		stream.EventHandlerFunc(activatedEvent,
+		eventbus.HandlerFunc(activatedEvent,
 			func(ctx context.Context, e *event.Event) error {
 				fmt.Printf("event: activated\nversion: %d\nstream: %s\n",
 					e.Version(), e.StreamID())
@@ -42,27 +48,34 @@ func main() {
 		checkError(eventBus.Listen(ctx))
 	}()
 
-	mutation := stream.NewMutation(
+	mutator := stream.NewMutator(
 		orderStream,
-		storage,
+		streamStorage,
 		eventBus,
 	)
 
-	mount(mutation, idx)
+	mutator.AddCommandController(addToCartCommand,
+		newAddToCartController(idx), stream.CreateMode())
+
+	mutator.AddCommandController(activateCommand,
+		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, command *command.Command) (*command.Reply, error) {
+			s.Mutate(activatedEvent, nil)
+			return nil, nil
+		}))
 
 	addToCartCmd := newAddToCartCommand(&addToCart{
 		ShopID: owner,
 		Name:   "someProduct",
 		Price:  2.33,
 	})
-	_, err := mutation.CommandSink(ctx, addToCartCmd)
+	_, err := mutator.CommandSink(ctx, addToCartCmd)
 	checkError(err)
 
 	activateCmd := newActivateOrderCommand()
-	_, err = mutation.CommandSink(ctx, activateCmd)
+	_, err = mutator.CommandSink(ctx, activateCmd)
 	checkError(err)
 
-	currentStream, err := storage.Load(ctx, orderStream, streamID, owner)
+	currentStream, err := streamStorage.Load(ctx, orderStream, streamID, owner)
 	checkError(err)
 
 	fmt.Printf("currentStream: %s\n", currentStream.State().(*order))

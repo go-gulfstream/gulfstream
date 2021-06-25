@@ -87,6 +87,7 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 
 	inMsg := nats.NewMsg(c.subject)
 	inMsg.Data = data
+	inMsg.Header = make(nats.Header)
 	for _, reqFunc := range c.requestFunc {
 		reqFunc(inMsg.Header, cmd)
 	}
@@ -94,6 +95,10 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 	if err != nil {
 		return nil, c.conn.LastError()
 	}
+	if outMsg.Header == nil {
+		outMsg.Header = make(nats.Header)
+	}
+
 	if outMsg.Header.Get(errKey) == errKey {
 		return nil, errors.New(string(outMsg.Data))
 	}

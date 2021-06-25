@@ -22,9 +22,9 @@ type EventController interface {
 	EventSink(context.Context, *Stream, *event.Event) error
 }
 
-type CommandCtrlFunc func(context.Context, *Stream, *command.Command) (*command.Reply, error)
+type ControllerFunc func(context.Context, *Stream, *command.Command) (*command.Reply, error)
 
-func (fn CommandCtrlFunc) CommandSink(ctx context.Context, s *Stream, c *command.Command) (*command.Reply, error) {
+func (fn ControllerFunc) CommandSink(ctx context.Context, s *Stream, c *command.Command) (*command.Reply, error) {
 	return fn(ctx, s, c)
 }
 
@@ -33,7 +33,7 @@ type (
 	EventControllerOption   func(*eventController)
 )
 
-type Mutation struct {
+type Mutator struct {
 	streamName         string
 	storage            Storage
 	publisher          Publisher
@@ -42,12 +42,12 @@ type Mutation struct {
 	blacklistOfEvents  []string
 }
 
-func NewMutation(
+func NewMutator(
 	streamName string,
 	storage Storage,
 	publisher Publisher,
-) *Mutation {
-	return &Mutation{
+) *Mutator {
+	return &Mutator{
 		streamName:         streamName,
 		storage:            storage,
 		publisher:          publisher,
@@ -57,7 +57,7 @@ func NewMutation(
 	}
 }
 
-func (m *Mutation) MountCommandController(
+func (m *Mutator) AddCommandController(
 	commandName string,
 	ctrl CommandController,
 	opts ...CommandControllerOption,
@@ -72,7 +72,7 @@ func (m *Mutation) MountCommandController(
 	m.commandControllers[commandName] = controller
 }
 
-func (m *Mutation) MountEventController(
+func (m *Mutator) AddEventController(
 	eventName string,
 	ctrl EventController,
 	opts ...EventControllerOption,
@@ -87,7 +87,7 @@ func (m *Mutation) MountEventController(
 	m.eventControllers[eventName] = controller
 }
 
-func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
+func (m *Mutator) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
 	if m.streamName != cmd.StreamName() {
 		return nil, fmt.Errorf("stream mismatch: got %s, expected %s",
 			cmd.StreamName(), m.streamName)
@@ -138,11 +138,11 @@ func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*comm
 	return r, err
 }
 
-func (m *Mutation) SetBlacklistOfEvents(names ...string) {
+func (m *Mutator) SetBlacklistOfEvents(names ...string) {
 	m.blacklistOfEvents = append(m.blacklistOfEvents, names...)
 }
 
-func (m *Mutation) isMySelfEvent(e *event.Event) bool {
+func (m *Mutator) isMySelfEvent(e *event.Event) bool {
 	for _, eventName := range m.blacklistOfEvents {
 		if e.Name() == eventName {
 			return true
@@ -151,7 +151,7 @@ func (m *Mutation) isMySelfEvent(e *event.Event) bool {
 	return false
 }
 
-func (m *Mutation) EventSink(ctx context.Context, e *event.Event) error {
+func (m *Mutator) EventSink(ctx context.Context, e *event.Event) error {
 	ec, found := m.eventControllers[e.Name()]
 	if !found {
 		return fmt.Errorf("controller for event %s not found", e.Name())

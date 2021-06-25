@@ -8,17 +8,6 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/stream"
 )
 
-func mount(mutation *stream.Mutation, idx *someLocalIndexInMem) {
-	mutation.MountCommandController(addToCartCommand,
-		newAddToCartController(idx), stream.CreateMode())
-
-	mutation.MountCommandController(activateCommand,
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, command *command.Command) (*command.Reply, error) {
-			s.Mutate(activatedEvent, nil)
-			return nil, nil
-		}))
-}
-
 type addToCartController struct {
 	index *someLocalIndexInMem
 }

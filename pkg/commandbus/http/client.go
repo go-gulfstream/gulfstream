@@ -24,7 +24,7 @@ type Doer interface {
 type Client struct {
 	endpoint     string
 	client       Doer
-	commandCodec *command.Codec
+	commandCodec command.Encoding
 	requestFunc  []ClientRequestFunc
 	responseFunc []ClientResponseFunc
 	contextFunc  []ContextFunc
@@ -52,7 +52,7 @@ func WithClientTransport(c Doer) ClientOption {
 	}
 }
 
-func WithClientCodec(c *command.Codec) ClientOption {
+func WithClientCodec(c command.Encoding) ClientOption {
 	return func(cli *Client) {
 		cli.commandCodec = c
 	}

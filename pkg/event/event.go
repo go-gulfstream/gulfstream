@@ -17,7 +17,7 @@ type Event struct {
 	createdAt  int64
 }
 
-func NewEvent(
+func New(
 	name string,
 	streamName string,
 	streamID uuid.UUID,
@@ -45,6 +45,10 @@ func (e *Event) StreamID() uuid.UUID {
 	return e.streamID
 }
 
+func (e *Event) StreamName() string {
+	return e.streamName
+}
+
 func (e *Event) Version() int {
 	return e.version
 }
@@ -61,6 +65,6 @@ func (e *Event) Owner() uuid.UUID {
 	return e.owner
 }
 
-func (e *Event) StreamName() string {
-	return e.streamName
+func (e *Event) Unix() int64 {
+	return e.createdAt
 }

@@ -16,8 +16,8 @@ type ContextFunc func(ctx context.Context) context.Context
 type ServerErrorHandler func(err error)
 
 type Server struct {
-	mutation     commandbus.CommandBus
-	commandCodec *command.Codec
+	mutation     commandbus.Sinker
+	commandCodec command.Encoding
 	requestFunc  []ServerRequestFunc
 	responseFunc []ServerResponseFunc
 	contextFunc  []ContextFunc
@@ -25,7 +25,7 @@ type Server struct {
 }
 
 func NewServer(
-	mutation commandbus.CommandBus,
+	mutation commandbus.Sinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{
@@ -41,7 +41,7 @@ func NewServer(
 
 type ServerOption func(*Server)
 
-func WithServerCodec(c *command.Codec) ServerOption {
+func WithServerCodec(c command.Encoding) ServerOption {
 	return func(srv *Server) {
 		srv.commandCodec = c
 	}

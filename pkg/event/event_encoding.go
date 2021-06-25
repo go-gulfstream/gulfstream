@@ -1,4 +1,4 @@
-package command
+package event
 
 import (
 	"bytes"
@@ -17,21 +17,20 @@ import (
 )
 
 const (
-	commandMagicNumber = uint16(121)
-	replyMagicNumber   = uint16(122)
-	containerSize      = int(unsafe.Sizeof(Command{})) - 24
+	containerSize = int(unsafe.Sizeof(Event{})) - 24
+	magicNumber   = uint16(129)
 )
 
 var (
-	ErrInvalidInputData = errors.New("command: invalid data input for codec")
-	ErrCodecNotFound    = errors.New("command: codec not found")
+	ErrInvalidInputData = errors.New("event: invalid data input for codec")
+	ErrCodecNotFound    = errors.New("event: codec not found")
 )
 
 var defaultCodec = NewCodec()
 
 type Encoding interface {
-	Decode([]byte) (*Command, error)
-	Encode(*Command) ([]byte, error)
+	Decode([]byte) (*Event, error)
+	Encode(*Event) ([]byte, error)
 }
 
 type Codec struct {
@@ -47,7 +46,7 @@ func NewCodec() *Codec {
 	}
 }
 
-func (c *Codec) Decode(data []byte) (*Command, error) {
+func (c *Codec) Decode(data []byte) (*Event, error) {
 	if len(data) < containerSize {
 		return nil, ErrInvalidInputData
 	}
@@ -63,61 +62,9 @@ func (c *Codec) Decode(data []byte) (*Command, error) {
 	return command, nil
 }
 
-func (c *Codec) Encode(command *Command) ([]byte, error) {
-	payload, err := c.encodePayload(command)
-	if err != nil {
-		return nil, err
-	}
-	return c.encodeContainer(command, payload)
-}
-
-func (c *Codec) encodePayload(command *Command) ([]byte, error) {
-	if command.payload == nil {
-		return nil, nil
-	}
-	if c.global != nil {
-		return c.global.Encode(command.payload)
-	}
-	cc, found := c.codec[command.name]
-	if found {
-		return cc.Encode(command.payload)
-	}
-	_, found = c.types[command.name]
-	if found {
-		if enc, ok := command.payload.(encoding.BinaryMarshaler); ok {
-			return enc.MarshalBinary()
-		}
-		if enc, ok := command.payload.(json.Marshaler); ok {
-			return enc.MarshalJSON()
-		}
-	}
-	return nil, fmt.Errorf("%w for %s",
-		ErrCodecNotFound, command.name)
-}
-
-func (c *Codec) encodeContainer(command *Command, payload []byte) ([]byte, error) {
-	w := newCommandWriter(command, payload)
-	if err := util.ErrOneOf(
-		w.writeMagicNumber,
-		w.writePayloadSize,
-		w.writeNameSize,
-		w.writeStreamSize,
-		w.writeID,
-		w.writeStreamID,
-		w.writeOwnerID,
-		w.writeName,
-		w.writeStreamName,
-		w.writeCreatedAt,
-		w.writePayload,
-	); err != nil {
-		return nil, err
-	}
-	return w.buf.Bytes(), nil
-}
-
-func (c *Codec) decodeContainer(data []byte) (*Command, []byte, error) {
-	reader := newCommandReader(data)
-	reader.container = new(Command)
+func (c *Codec) decodeContainer(data []byte) (*Event, []byte, error) {
+	reader := newReader(data)
+	reader.container = new(Event)
 	if err := util.ErrOneOf(
 		reader.checkMagicNumber,
 		reader.readPayloadSize,
@@ -129,6 +76,7 @@ func (c *Codec) decodeContainer(data []byte) (*Command, []byte, error) {
 		reader.readName,
 		reader.readStreamName,
 		reader.readCreatedAt,
+		reader.readVersion,
 	); err != nil {
 		return nil, nil, err
 	}
@@ -165,8 +113,16 @@ func (c *Codec) decodePayload(name string, data []byte) (interface{}, error) {
 		}
 		return val.Interface(), nil
 	}
-	return nil, fmt.Errorf("%w for %s command",
+	return nil, fmt.Errorf("%w for %s event",
 		ErrCodecNotFound, name)
+}
+
+func (c *Codec) Encode(e *Event) ([]byte, error) {
+	payload, err := c.encodePayload(e)
+	if err != nil {
+		return nil, err
+	}
+	return c.encodeContainer(e, payload)
 }
 
 func (c *Codec) Register(name string, cc codec.Codec) {
@@ -198,6 +154,51 @@ func (c *Codec) AddKnownType(types ...interface{}) error {
 	return nil
 }
 
+func (c *Codec) encodePayload(e *Event) ([]byte, error) {
+	if e.payload == nil {
+		return nil, nil
+	}
+	if c.global != nil {
+		return c.global.Encode(e.payload)
+	}
+	cc, found := c.codec[e.name]
+	if found {
+		return cc.Encode(e.payload)
+	}
+	_, found = c.types[e.name]
+	if found {
+		if enc, ok := e.payload.(encoding.BinaryMarshaler); ok {
+			return enc.MarshalBinary()
+		}
+		if enc, ok := e.payload.(json.Marshaler); ok {
+			return enc.MarshalJSON()
+		}
+	}
+	return nil, fmt.Errorf("%w for %s",
+		ErrCodecNotFound, e.name)
+}
+
+func (c *Codec) encodeContainer(e *Event, payload []byte) ([]byte, error) {
+	w := newWriter(e, payload)
+	if err := util.ErrOneOf(
+		w.writeMagicNumber,
+		w.writePayloadSize,
+		w.writeNameSize,
+		w.writeStreamSize,
+		w.writeID,
+		w.writeStreamID,
+		w.writeOwnerID,
+		w.writeName,
+		w.writeStreamName,
+		w.writeCreatedAt,
+		w.writeVersion,
+		w.writePayload,
+	); err != nil {
+		return nil, err
+	}
+	return w.buf.Bytes(), nil
+}
+
 func AddKnownType(types ...interface{}) error {
 	return defaultCodec.AddKnownType(types...)
 }
@@ -206,143 +207,157 @@ func RegisterCodec(name string, cc codec.Codec) {
 	defaultCodec.Register(name, cc)
 }
 
-func Encode(command *Command) ([]byte, error) {
-	return defaultCodec.Encode(command)
+func Encode(e *Event) ([]byte, error) {
+	return defaultCodec.Encode(e)
 }
 
-func Decode(data []byte) (*Command, error) {
+func Decode(data []byte) (*Event, error) {
 	return defaultCodec.Decode(data)
 }
 
-type commandWriter struct {
+type writer struct {
 	buf       *bytes.Buffer
 	prev      uintptr
-	container *Command
+	container *Event
 	payload   []byte
 }
 
-func newCommandWriter(c *Command, payload []byte) *commandWriter {
-	return &commandWriter{
+func newWriter(e *Event, payload []byte) *writer {
+	return &writer{
 		buf:       bytes.NewBuffer(nil),
-		container: c,
+		container: e,
 		payload:   payload,
 	}
 }
 
-func (w *commandWriter) writeMagicNumber() error {
-	return binary.Write(w.buf, binary.LittleEndian, commandMagicNumber)
+func (w *writer) writeMagicNumber() error {
+	return binary.Write(w.buf, binary.LittleEndian, magicNumber)
 }
 
-func (w *commandWriter) writePayloadSize() error {
+func (w *writer) writePayloadSize() error {
 	return binary.Write(w.buf, binary.LittleEndian, uint32(len(w.payload)))
 }
 
-func (w *commandWriter) writeNameSize() error {
+func (w *writer) writeVersion() error {
+	return binary.Write(w.buf, binary.LittleEndian, int64(w.container.version))
+}
+
+func (w *writer) writeNameSize() error {
 	return binary.Write(w.buf, binary.LittleEndian, uint32(len(w.container.name)))
 }
 
-func (w *commandWriter) writeStreamSize() error {
+func (w *writer) writeStreamSize() error {
 	return binary.Write(w.buf, binary.LittleEndian, uint32(len(w.container.streamName)))
 }
 
-func (w *commandWriter) writeID() error {
+func (w *writer) writeID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.id)
 }
 
-func (w *commandWriter) writeStreamID() error {
+func (w *writer) writeStreamID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.streamID)
 }
 
-func (w *commandWriter) writeOwnerID() error {
+func (w *writer) writeOwnerID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.owner)
 }
 
-func (w *commandWriter) writeName() error {
+func (w *writer) writeName() error {
 	return binary.Write(w.buf, binary.LittleEndian, []byte(w.container.name))
 }
 
-func (w *commandWriter) writeStreamName() error {
+func (w *writer) writeStreamName() error {
 	return binary.Write(w.buf, binary.LittleEndian, []byte(w.container.streamName))
 }
 
-func (w *commandWriter) writeCreatedAt() error {
+func (w *writer) writeCreatedAt() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.createdAt)
 }
 
-func (w *commandWriter) writePayload() error {
+func (w *writer) writePayload() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.payload)
 }
 
-type commandReader struct {
+type reader struct {
 	reader      *bytes.Reader
 	data        []byte
 	prev        uintptr
 	nameSize    uint32
 	streamSize  uint32
 	payloadSize uint32
-	container   *Command
+	container   *Event
 }
 
-func newCommandReader(data []byte) *commandReader {
-	return &commandReader{
+func newReader(data []byte) *reader {
+	return &reader{
 		reader: bytes.NewReader(data),
 		data:   data,
 	}
 }
 
-func (r *commandReader) next(offset uintptr) {
+func (r *reader) next(offset uintptr) {
 	r.reader.Reset(r.data[r.prev : r.prev+offset])
 	r.prev += offset
 }
 
-func (r *commandReader) checkMagicNumber() error {
-	r.next(unsafe.Sizeof(commandMagicNumber))
+func (r *reader) checkMagicNumber() error {
+	r.next(unsafe.Sizeof(magicNumber))
 	var val uint16
 	if err := binary.Read(r.reader, binary.LittleEndian, &val); err != nil {
 		return err
 	}
-	if val != commandMagicNumber {
+	if val != magicNumber {
 		return ErrInvalidInputData
 	}
 	return nil
 }
 
-func (r *commandReader) readNameSize() error {
+func (r *reader) readNameSize() error {
 	r.next(unsafe.Sizeof(r.nameSize))
 	return binary.Read(r.reader, binary.LittleEndian, &r.nameSize)
 }
 
-func (r *commandReader) readStreamSize() error {
+func (r *reader) readStreamSize() error {
 	r.next(unsafe.Sizeof(r.streamSize))
 	return binary.Read(r.reader, binary.LittleEndian, &r.streamSize)
 }
 
-func (r *commandReader) readPayloadSize() error {
+func (r *reader) readVersion() error {
+	r.next(unsafe.Sizeof(r.container.version))
+	var v int64
+	if err := binary.Read(r.reader, binary.LittleEndian, &v); err != nil {
+		return err
+	}
+	r.container.version = int(v)
+	return nil
+}
+
+func (r *reader) readPayloadSize() error {
 	r.next(unsafe.Sizeof(r.payloadSize))
 	return binary.Read(r.reader, binary.LittleEndian, &r.payloadSize)
 }
 
-func (r *commandReader) readID() error {
+func (r *reader) readID() error {
 	r.next(unsafe.Sizeof(r.container.id))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.id)
 }
 
-func (r *commandReader) readStreamID() error {
+func (r *reader) readStreamID() error {
 	r.next(unsafe.Sizeof(r.container.streamID))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.streamID)
 }
 
-func (r *commandReader) readOwnerID() error {
+func (r *reader) readOwnerID() error {
 	r.next(unsafe.Sizeof(r.container.owner))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.owner)
 }
 
-func (r *commandReader) readCreatedAt() error {
+func (r *reader) readCreatedAt() error {
 	r.next(unsafe.Sizeof(r.container.createdAt))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.createdAt)
 }
 
-func (r *commandReader) readName() error {
+func (r *reader) readName() error {
 	r.next(uintptr(r.nameSize))
 	v := make([]byte, r.nameSize)
 	if err := binary.Read(r.reader, binary.LittleEndian, &v); err != nil {
@@ -352,7 +367,7 @@ func (r *commandReader) readName() error {
 	return nil
 }
 
-func (r *commandReader) readStreamName() error {
+func (r *reader) readStreamName() error {
 	r.next(uintptr(r.streamSize))
 	v := make([]byte, r.streamSize)
 	if err := binary.Read(r.reader, binary.LittleEndian, &v); err != nil {
@@ -362,7 +377,7 @@ func (r *commandReader) readStreamName() error {
 	return nil
 }
 
-func (r *commandReader) readPayload() ([]byte, error) {
+func (r *reader) readPayload() ([]byte, error) {
 	r.next(uintptr(r.payloadSize))
 	b := make([]byte, r.payloadSize)
 	if err := binary.Read(r.reader, binary.LittleEndian, &b); err != nil {

@@ -6,6 +6,6 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/command"
 )
 
-type CommandBus interface {
+type Sinker interface {
 	CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error)
 }

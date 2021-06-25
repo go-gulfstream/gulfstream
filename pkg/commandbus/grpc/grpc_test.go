@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-gulfstream/gulfstream/pkg/storage"
+
 	"google.golang.org/grpc/metadata"
 
 	"google.golang.org/grpc/codes"
@@ -30,8 +32,8 @@ import (
 func TestClientServer(t *testing.T) {
 	// setup stream controllers
 	mutation := newMutation()
-	mutation.MountCommandController("action",
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
+	mutation.AddCommandController("action",
+		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
 
@@ -70,8 +72,8 @@ func TestServerInterceptors(t *testing.T) {
 
 	// setup stream controllers
 	mutation := newMutation()
-	mutation.MountCommandController("action",
-		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
+	mutation.AddCommandController("action",
+		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
 
@@ -152,11 +154,11 @@ func listen(t *testing.T) (string, net.Listener) {
 	return addr, l
 }
 
-func newMutation() *stream.Mutation {
-	storage := stream.NewStorage(func() *stream.Stream {
-		return stream.Blank(&state{One: "one", Two: "two"})
+func newMutation() *stream.Mutator {
+	stor := storage.New(func() *stream.Stream {
+		return stream.Blank("one", &state{One: "one", Two: "two"})
 	})
-	return stream.NewMutation("order", storage, mockPublisher{})
+	return stream.NewMutator("order", stor, mockPublisher{})
 }
 
 // current state of the order stream.

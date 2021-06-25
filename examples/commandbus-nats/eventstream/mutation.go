@@ -8,19 +8,19 @@ import (
 	"github.com/go-gulfstream/gulfstream/examples/commandbus-nats/types"
 )
 
-type Service interface {
+type Mutation interface {
 	CreateParty(ctx context.Context, currentState *state, command *types.CreateNewParty) (*types.PartyCreated, error)
 	AddParticipant(ctx context.Context, currentState *state, command *types.AddParticipant) (*types.ParticipantAdded, error)
 }
 
-type service struct {
+type mutation struct {
 }
 
-func newService() Service {
-	return &service{}
+func newMutation() Mutation {
+	return &mutation{}
 }
 
-func (m *service) CreateParty(ctx context.Context, currentState *state, command *types.CreateNewParty) (*types.PartyCreated, error) {
+func (m *mutation) CreateParty(ctx context.Context, currentState *state, command *types.CreateNewParty) (*types.PartyCreated, error) {
 	radius := command.Radius / 2
 	if radius > 5000 {
 		return nil, fmt.Errorf("max radius exceeded")
@@ -38,7 +38,7 @@ func (m *service) CreateParty(ctx context.Context, currentState *state, command 
 	}, nil
 }
 
-func (m *service) AddParticipant(ctx context.Context, currentState *state, command *types.AddParticipant) (*types.ParticipantAdded, error) {
+func (m *mutation) AddParticipant(ctx context.Context, currentState *state, command *types.AddParticipant) (*types.ParticipantAdded, error) {
 	return &types.ParticipantAdded{
 		EventName: currentState.EventName,
 		DateTime:  currentState.DateTime,

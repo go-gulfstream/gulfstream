@@ -52,7 +52,7 @@ func TestStream_MarshalBinary(t *testing.T) {
 	data, err := stream1.MarshalBinary()
 	assert.NoError(t, err)
 	assert.NotZero(t, data)
-	stream2 := Blank(&myState{})
+	stream2 := Blank("name", &myState{})
 	assert.NoError(t, stream2.UnmarshalBinary(data))
 	assert.Equal(t, stream1.ID(), stream2.ID())
 	assert.Equal(t, stream1.Owner(), stream2.Owner())
