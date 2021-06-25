@@ -20,6 +20,9 @@ type Stream struct {
 }
 
 func New(name string, id uuid.UUID, owner uuid.UUID, initState State) *Stream {
+	if len(name) == 0 {
+		panic("no stream name")
+	}
 	checkPtr(initState)
 	return &Stream{
 		id:    id,
@@ -29,9 +32,13 @@ func New(name string, id uuid.UUID, owner uuid.UUID, initState State) *Stream {
 	}
 }
 
-func Blank(initState State) *Stream {
+func Blank(name string, initState State) *Stream {
+	if len(name) == 0 {
+		panic("no stream name")
+	}
 	checkPtr(initState)
 	return &Stream{
+		name:    name,
 		state:   initState,
 		version: -1,
 	}

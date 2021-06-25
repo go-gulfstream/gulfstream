@@ -91,7 +91,7 @@ func (c *Codec) encodePayload(command *Command) ([]byte, error) {
 			return enc.MarshalJSON()
 		}
 	}
-	return nil, fmt.Errorf("%w for %s command",
+	return nil, fmt.Errorf("%w for %s",
 		ErrCodecNotFound, command.name)
 }
 
@@ -202,7 +202,7 @@ func AddKnownType(types ...interface{}) error {
 	return defaultCodec.AddKnownType(types...)
 }
 
-func Register(name string, cc codec.Codec) {
+func RegisterCodec(name string, cc codec.Codec) {
 	defaultCodec.Register(name, cc)
 }
 

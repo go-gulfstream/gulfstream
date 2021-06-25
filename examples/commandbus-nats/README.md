@@ -1,0 +1,4 @@
+# Run example
+```
+$ make example
+```

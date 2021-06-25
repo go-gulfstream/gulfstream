@@ -20,7 +20,7 @@ import (
 func TestClientServer(t *testing.T) {
 	// setup stream controllers
 	mutation := newMutation()
-	mutation.FromCommand("action",
+	mutation.MountCommand("action",
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
@@ -46,7 +46,7 @@ func TestServerMiddleware(t *testing.T) {
 	validOwnerID := uuid.New()
 	invalidOwnerID := uuid.New()
 	mutation := newMutation()
-	mutation.FromCommand("action",
+	mutation.MountCommand("action",
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())

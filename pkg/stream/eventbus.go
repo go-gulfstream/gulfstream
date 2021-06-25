@@ -21,7 +21,7 @@ type Publisher interface {
 }
 
 type Subscriber interface {
-	Subscribe(ctx context.Context, streamName string, h EventHandler)
+	Subscribe(ctx context.Context, streamName string, h ...EventHandler)
 }
 
 type EventHandler interface {
@@ -114,13 +114,15 @@ func (b *EventBus) Publish(_ context.Context, events []*event.Event) error {
 	return nil
 }
 
-func (b *EventBus) Subscribe(_ context.Context, streamName string, h EventHandler) {
+func (b *EventBus) Subscribe(_ context.Context, streamName string, handlers ...EventHandler) {
 	channel, ok := b.channels[streamName]
 	if !ok {
 		channel = newChannel(b.partitions, streamName)
 		b.wg.Add(1)
 	}
-	channel.addRecv(h)
+	for _, h := range handlers {
+		channel.addRecv(h)
+	}
 	b.channels[streamName] = channel
 }
 

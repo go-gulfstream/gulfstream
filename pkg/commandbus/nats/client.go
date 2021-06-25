@@ -94,13 +94,9 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 	if err != nil {
 		return nil, c.conn.LastError()
 	}
-	if outMsg.Subject != c.subject {
-		return nil, nats.ErrSubjectMismatch
-	}
 	if outMsg.Header.Get(errKey) == errKey {
 		return nil, errors.New(string(outMsg.Data))
 	}
-
 	reply := new(command.Reply)
 	if err := reply.UnmarshalBinary(outMsg.Data); err != nil {
 		return nil, err

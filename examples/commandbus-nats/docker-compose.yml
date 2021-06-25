@@ -1,0 +1,24 @@
+version: "3.5"
+services:
+  eventstream:
+    build:
+      context: ""
+      dockerfile: eventstream.dockerfile
+    networks: ["nats"]
+    depends_on: ["nats"]
+  client:
+    build:
+      context: ""
+      dockerfile: client.dockerfile
+    networks: [ "nats" ]
+    depends_on: [ "nats", "eventstream" ]
+  nats:
+    image: nats
+    ports:
+      - "8222:8222"
+      - "4222:4222"
+    networks: ["nats"]
+
+networks:
+  nats:
+    name: nats

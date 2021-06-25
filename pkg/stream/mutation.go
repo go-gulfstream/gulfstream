@@ -57,7 +57,7 @@ func NewMutation(
 	}
 }
 
-func (m *Mutation) FromCommand(
+func (m *Mutation) MountCommand(
 	commandName string,
 	ctrl CommandController,
 	opts ...CommandControllerOption,
@@ -72,7 +72,7 @@ func (m *Mutation) FromCommand(
 	m.commandControllers[commandName] = controller
 }
 
-func (m *Mutation) FromEvent(
+func (m *Mutation) MountEvent(
 	eventName string,
 	ctrl EventController,
 	opts ...EventControllerOption,
@@ -121,6 +121,9 @@ func (m *Mutation) CommandSink(ctx context.Context, cmd *command.Command) (*comm
 	r, err := cc.controller.CommandSink(ctx, stream, cmd)
 	if err != nil {
 		return nil, err
+	}
+	if r == nil {
+		r = cmd.ReplyOk(stream.Version())
 	}
 	if len(stream.Changes()) == 0 {
 		return r, nil

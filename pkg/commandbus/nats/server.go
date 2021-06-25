@@ -96,11 +96,14 @@ func (s *Server) handleMsg(msg *nats.Msg) []byte {
 		ctx = ctxFunc(ctx)
 	}
 
+	if msg.Header == nil {
+		msg.Header = nats.Header{}
+	}
+
 	cmd, err := s.decodeCommand(msg.Data)
 	if err != nil {
 		return s.writeError(msg, err)
 	}
-
 	for _, reqFunc := range s.requestFunc {
 		reqFunc(msg.Header, cmd)
 	}
