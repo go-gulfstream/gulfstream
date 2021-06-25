@@ -30,7 +30,7 @@ import (
 func TestClientServer(t *testing.T) {
 	// setup stream controllers
 	mutation := newMutation()
-	mutation.MountCommand("action",
+	mutation.MountCommandController("action",
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())
@@ -70,7 +70,7 @@ func TestServerInterceptors(t *testing.T) {
 
 	// setup stream controllers
 	mutation := newMutation()
-	mutation.MountCommand("action",
+	mutation.MountCommandController("action",
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
 		}), stream.CreateMode())

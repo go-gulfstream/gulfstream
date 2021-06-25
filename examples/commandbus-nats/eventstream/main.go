@@ -24,12 +24,12 @@ func main() {
 
 	svc := newService()
 
-	mutation.MountCommand(
+	mutation.MountCommandController(
 		types.CreateNewEventCommand,
 		CreateNewEventController(svc),
 		stream.CreateMode())
 
-	mutation.MountCommand(
+	mutation.MountCommandController(
 		types.AddParticipantCommand,
 		AddParticipantController(svc))
 

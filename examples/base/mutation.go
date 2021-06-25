@@ -9,10 +9,10 @@ import (
 )
 
 func mount(mutation *stream.Mutation, idx *someLocalIndexInMem) {
-	mutation.MountCommand(addToCartCommand,
+	mutation.MountCommandController(addToCartCommand,
 		newAddToCartController(idx), stream.CreateMode())
 
-	mutation.MountCommand(activateCommand,
+	mutation.MountCommandController(activateCommand,
 		stream.CommandCtrlFunc(func(ctx context.Context, s *stream.Stream, command *command.Command) (*command.Reply, error) {
 			s.Mutate(activatedEvent, nil)
 			return nil, nil

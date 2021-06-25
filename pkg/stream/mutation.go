@@ -57,7 +57,7 @@ func NewMutation(
 	}
 }
 
-func (m *Mutation) MountCommand(
+func (m *Mutation) MountCommandController(
 	commandName string,
 	ctrl CommandController,
 	opts ...CommandControllerOption,
@@ -72,7 +72,7 @@ func (m *Mutation) MountCommand(
 	m.commandControllers[commandName] = controller
 }
 
-func (m *Mutation) MountEvent(
+func (m *Mutation) MountEventController(
 	eventName string,
 	ctrl EventController,
 	opts ...EventControllerOption,
