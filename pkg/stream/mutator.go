@@ -18,7 +18,7 @@ type CommandController interface {
 }
 
 type EventController interface {
-	PickOwner(*event.Event) []Owner
+	PickStream(*event.Event) []uuid.UUID
 	EventSink(context.Context, *Stream, *event.Event) error
 }
 
@@ -26,11 +26,6 @@ type ControllerFunc func(context.Context, *Stream, *command.Command) (*command.R
 
 func (fn ControllerFunc) CommandSink(ctx context.Context, s *Stream, c *command.Command) (*command.Reply, error) {
 	return fn(ctx, s, c)
-}
-
-type Owner struct {
-	StreamID uuid.UUID
-	Owner    uuid.UUID
 }
 
 type (
@@ -153,12 +148,12 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) error {
 	if !found || m.isMySelfEvent(e) {
 		return nil
 	}
-	owners := ec.controller.PickOwner(e)
-	if len(owners) == 0 {
+	streams := ec.controller.PickStream(e)
+	if len(streams) == 0 {
 		return nil
 	}
-	for _, owner := range owners {
-		stream, err := m.storage.Load(ctx, m.streamName, owner.StreamID)
+	for _, stream := range streams {
+		stream, err := m.storage.Load(ctx, m.streamName, stream)
 		if err != nil {
 			return err
 		}
