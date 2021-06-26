@@ -18,8 +18,25 @@ type CommandController interface {
 }
 
 type EventController interface {
-	PickStream(*event.Event) []uuid.UUID
+	PickStream(*event.Event) Picker
 	EventSink(context.Context, *Stream, *event.Event) error
+}
+
+type Picker struct {
+	StreamID  uuid.UUID
+	StreamIDs []uuid.UUID
+}
+
+func (p Picker) isEmpty() bool {
+	return len(p.StreamIDs) == 0 && p.StreamID == uuid.Nil
+}
+
+func (p Picker) hasOneStream() bool {
+	return p.StreamID != uuid.Nil
+}
+
+func (p Picker) hasManyStream() bool {
+	return p.StreamID == uuid.Nil && len(p.StreamIDs) > 0
 }
 
 type ControllerFunc func(context.Context, *Stream, *command.Command) (*command.Reply, error)
@@ -148,17 +165,28 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) error {
 	if !found || m.isMySelfEvent(e) {
 		return nil
 	}
-	streams := ec.controller.PickStream(e)
-	if len(streams) == 0 {
+	streamPicker := ec.controller.PickStream(e)
+	if streamPicker.isEmpty() {
 		return nil
 	}
-	for _, stream := range streams {
-		stream, err := m.storage.Load(ctx, m.streamName, stream)
+	if streamPicker.hasOneStream() {
+		stream, err := m.storage.Load(ctx, m.streamName, streamPicker.StreamID)
 		if err != nil {
 			return err
 		}
 		if err := m.eventSink(ctx, ec, stream, e); err != nil {
 			return err
+		}
+	}
+	if streamPicker.hasManyStream() {
+		for _, stream := range streamPicker.StreamIDs {
+			stream, err := m.storage.Load(ctx, m.streamName, stream)
+			if err != nil {
+				return err
+			}
+			if err := m.eventSink(ctx, ec, stream, e); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
