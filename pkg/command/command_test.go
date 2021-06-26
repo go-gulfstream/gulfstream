@@ -13,9 +13,8 @@ func TestNew(t *testing.T) {
 		name     = "addCard"
 		streamID = uuid.New()
 		stream   = "account"
-		owner    = uuid.New()
 	)
-	addCardCommand := New(name, stream, streamID, owner,
+	addCardCommand := New(name, stream, streamID,
 		addCard{
 			Sum: 5000,
 		})
@@ -23,7 +22,6 @@ func TestNew(t *testing.T) {
 	assert.False(t, addCardCommand.IsEmptyStreamID())
 	assert.Equal(t, stream, addCardCommand.StreamName())
 	assert.Equal(t, streamID, addCardCommand.StreamID())
-	assert.Equal(t, owner, addCardCommand.Owner())
 	assert.NotZero(t, addCardCommand.Unix())
 	assert.Equal(t, name, addCardCommand.Name())
 	assert.Equal(t, 5000, addCardCommand.Payload().(addCard).Sum)

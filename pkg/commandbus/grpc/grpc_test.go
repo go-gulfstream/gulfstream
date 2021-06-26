@@ -58,7 +58,7 @@ func TestClientServer(t *testing.T) {
 	client := NewClient(conn)
 
 	// request from client to server
-	cmd := command.New("action", "order", uuid.New(), uuid.New(), nil)
+	cmd := command.New("action", "order", uuid.New(), nil)
 	reply, err := client.CommandSink(ctx, cmd)
 	assert.Nil(t, err)
 	assert.Equal(t, 12, reply.StreamVersion())
@@ -67,8 +67,8 @@ func TestClientServer(t *testing.T) {
 }
 
 func TestServerInterceptors(t *testing.T) {
-	validOwnerID := uuid.New()
-	invalidOwnerID := uuid.New()
+	validID := uuid.New()
+	invalidID := uuid.New()
 
 	// setup stream controllers
 	mutation := newMutation()
@@ -89,7 +89,7 @@ func TestServerInterceptors(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			if token != validOwnerID.String() {
+			if token != validID.String() {
 				return nil, status.Errorf(codes.Unauthenticated, "Bad authorization string")
 			}
 			return handler(ctx, req)
@@ -110,13 +110,13 @@ func TestServerInterceptors(t *testing.T) {
 	client := NewClient(conn,
 		WithClientRequestFunc(
 			func(md metadata.MD, c *command.Command) {
-				token := schema + " " + c.Owner().String()
+				token := schema + " " + c.StreamID().String()
 				md.Append(schema, token)
 			}))
 
 	// request from client to server
 	// valid owner
-	cmd := command.New("action", "order", uuid.New(), validOwnerID, nil)
+	cmd := command.New("action", "order", validID, nil)
 	reply, err := client.CommandSink(ctx, cmd)
 	assert.Nil(t, err)
 	assert.Equal(t, 12, reply.StreamVersion())
@@ -124,7 +124,7 @@ func TestServerInterceptors(t *testing.T) {
 	assert.Nil(t, reply.Err())
 
 	// invalid owner
-	cmd = command.New("action", "order", uuid.New(), invalidOwnerID, nil)
+	cmd = command.New("action", "order", invalidID, nil)
 	reply, err = client.CommandSink(ctx, cmd)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Bad authorization string")

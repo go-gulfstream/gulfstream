@@ -104,7 +104,6 @@ func (c *Codec) encodeContainer(command *Command, payload []byte) ([]byte, error
 		w.writeStreamSize,
 		w.writeID,
 		w.writeStreamID,
-		w.writeOwnerID,
 		w.writeName,
 		w.writeStreamName,
 		w.writeCreatedAt,
@@ -125,7 +124,6 @@ func (c *Codec) decodeContainer(data []byte) (*Command, []byte, error) {
 		reader.readStreamSize,
 		reader.readID,
 		reader.readStreamID,
-		reader.readOwnerID,
 		reader.readName,
 		reader.readStreamName,
 		reader.readCreatedAt,
@@ -253,10 +251,6 @@ func (w *commandWriter) writeStreamID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.streamID)
 }
 
-func (w *commandWriter) writeOwnerID() error {
-	return binary.Write(w.buf, binary.LittleEndian, w.container.owner)
-}
-
 func (w *commandWriter) writeName() error {
 	return binary.Write(w.buf, binary.LittleEndian, []byte(w.container.name))
 }
@@ -330,11 +324,6 @@ func (r *commandReader) readID() error {
 func (r *commandReader) readStreamID() error {
 	r.next(unsafe.Sizeof(r.container.streamID))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.streamID)
-}
-
-func (r *commandReader) readOwnerID() error {
-	r.next(unsafe.Sizeof(r.container.owner))
-	return binary.Read(r.reader, binary.LittleEndian, &r.container.owner)
 }
 
 func (r *commandReader) readCreatedAt() error {

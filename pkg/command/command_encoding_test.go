@@ -20,7 +20,6 @@ func TestCodec_Decode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, id, command.ID())
 	assert.Equal(t, id, command.StreamID())
-	assert.Equal(t, id, command.Owner())
 	assert.Equal(t, "name", command.Name())
 	assert.Equal(t, "stream", command.StreamName())
 	assert.Equal(t, int64(5), command.Unix())
@@ -28,7 +27,7 @@ func TestCodec_Decode(t *testing.T) {
 
 func TestCodec_Encode(t *testing.T) {
 	codec := NewCodec()
-	addCardCommand := New("addCard", "account", uuid.New(), uuid.New(),
+	addCardCommand := New("addCard", "account", uuid.New(),
 		addCard{
 			Sum: 789,
 		})
@@ -42,7 +41,6 @@ func TestCodec_Encode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, addCardCommand.ID(), command2.ID())
 	assert.Equal(t, addCardCommand.StreamID(), command2.StreamID())
-	assert.Equal(t, addCardCommand.Owner(), command2.Owner())
 	assert.Equal(t, addCardCommand.Name(), command2.Name())
 	assert.Equal(t, addCardCommand.StreamName(), command2.StreamName())
 	assert.Equal(t, addCardCommand.Unix(), command2.Unix())
@@ -82,7 +80,6 @@ func mockContainer(t *testing.T, mn uint16, id uuid.UUID, payload []byte) *bytes
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, uint32(len(payload))))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, uint32(4)))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, uint32(6)))
-	assert.Nil(t, binary.Write(buf, binary.LittleEndian, id))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, id))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, id))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, []byte("name")))

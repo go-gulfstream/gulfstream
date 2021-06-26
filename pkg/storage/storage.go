@@ -28,7 +28,6 @@ type stateStorage struct {
 type key struct {
 	streamType string
 	streamID   uuid.UUID
-	owner      uuid.UUID
 }
 
 func (s *stateStorage) BlankStream() *stream.Stream {
@@ -38,7 +37,7 @@ func (s *stateStorage) BlankStream() *stream.Stream {
 func (s *stateStorage) Persist(_ context.Context, stream *stream.Stream) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	k := key{streamType: stream.Name(), owner: stream.Owner(), streamID: stream.ID()}
+	k := key{streamType: stream.Name(), streamID: stream.ID()}
 	rawData, found := s.data[k]
 	if found {
 		prev := s.blankStream()
@@ -58,14 +57,14 @@ func (s *stateStorage) Persist(_ context.Context, stream *stream.Stream) error {
 	return nil
 }
 
-func (s *stateStorage) Load(_ context.Context, streamName string, streamID uuid.UUID, owner uuid.UUID) (*stream.Stream, error) {
+func (s *stateStorage) Load(_ context.Context, streamName string, streamID uuid.UUID) (*stream.Stream, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	k := key{streamType: streamName, owner: owner, streamID: streamID}
+	k := key{streamType: streamName, streamID: streamID}
 	rawData, found := s.data[k]
 	if !found {
-		return nil, fmt.Errorf("%s{StreamID:%s, Owner:%s} not found",
-			streamName, streamID, owner)
+		return nil, fmt.Errorf("%s{StreamID:%s} not found",
+			streamName, streamID)
 	}
 	blankStream := s.blankStream()
 	if err := blankStream.UnmarshalBinary(rawData); err != nil {
@@ -74,10 +73,10 @@ func (s *stateStorage) Load(_ context.Context, streamName string, streamID uuid.
 	return blankStream, nil
 }
 
-func (s *stateStorage) MarkUnpublished(ctx context.Context, cur *stream.Stream) error {
+func (s *stateStorage) MarkUnpublished(_ context.Context, cur *stream.Stream) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	k := key{streamType: cur.Name(), owner: cur.Owner(), streamID: cur.ID()}
+	k := key{streamType: cur.Name(), streamID: cur.ID()}
 	s.versions[k] = cur.Version()
 	return nil
 }

@@ -9,7 +9,6 @@ import (
 type Event struct {
 	id         uuid.UUID
 	streamID   uuid.UUID
-	owner      uuid.UUID
 	streamName string
 	name       string
 	payload    interface{}
@@ -21,7 +20,6 @@ func New(
 	name string,
 	streamName string,
 	streamID uuid.UUID,
-	owner uuid.UUID,
 	version int,
 	payload interface{},
 ) *Event {
@@ -30,7 +28,6 @@ func New(
 		streamName: streamName,
 		streamID:   streamID,
 		name:       name,
-		owner:      owner,
 		payload:    payload,
 		version:    version,
 		createdAt:  time.Now().Unix(),
@@ -59,10 +56,6 @@ func (e *Event) Payload() interface{} {
 
 func (e *Event) Name() string {
 	return e.name
-}
-
-func (e *Event) Owner() uuid.UUID {
-	return e.owner
 }
 
 func (e *Event) Unix() int64 {

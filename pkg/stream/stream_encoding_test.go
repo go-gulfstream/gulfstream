@@ -27,7 +27,6 @@ func TestStream_UnmarshalBinary(t *testing.T) {
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, payloadSize))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, nameSize))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, id))
-	assert.Nil(t, binary.Write(buf, binary.LittleEndian, id))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, name))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, int64(10)))
 	assert.Nil(t, binary.Write(buf, binary.LittleEndian, updatedAt))
@@ -36,7 +35,6 @@ func TestStream_UnmarshalBinary(t *testing.T) {
 	s.state = state
 	assert.Nil(t, s.UnmarshalBinary(buf.Bytes()))
 	assert.Equal(t, id, s.ID())
-	assert.Equal(t, id, s.Owner())
 	assert.Equal(t, 10, s.Version())
 	assert.Equal(t, updatedAt, s.Unix())
 	assert.Equal(t, state.One, s.State().(*myState).One)
@@ -44,7 +42,7 @@ func TestStream_UnmarshalBinary(t *testing.T) {
 }
 
 func TestStream_MarshalBinary(t *testing.T) {
-	stream1 := New("name", uuid.New(), uuid.New(),
+	stream1 := New("name", uuid.New(),
 		&myState{
 			One: "one",
 			Two: "two",
@@ -55,7 +53,6 @@ func TestStream_MarshalBinary(t *testing.T) {
 	stream2 := Blank("name", &myState{})
 	assert.NoError(t, stream2.UnmarshalBinary(data))
 	assert.Equal(t, stream1.ID(), stream2.ID())
-	assert.Equal(t, stream1.Owner(), stream2.Owner())
 	assert.Equal(t, stream1.Name(), stream2.Name())
 	assert.Equal(t, stream1.Version(), stream2.Version())
 	assert.Equal(t, stream1.Unix(), stream2.Unix())

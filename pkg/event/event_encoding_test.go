@@ -10,7 +10,7 @@ import (
 )
 
 func TestCodec_Decode(t *testing.T) {
-	e := New("somePayload", "party", uuid.New(), uuid.New(), 1,
+	e := New("somePayload", "party", uuid.New(), 1,
 		&somePayload{Test: "Test"},
 	)
 	c := NewCodec()
@@ -25,7 +25,6 @@ func TestCodec_Decode(t *testing.T) {
 	assert.Equal(t, e.StreamName(), e2.StreamName())
 	assert.Equal(t, e.Version(), e2.Version())
 	assert.Equal(t, e.Name(), e2.Name())
-	assert.Equal(t, e.Owner(), e2.Owner())
 	assert.Equal(t, e.Unix(), e2.Unix())
 	assert.Equal(t, e.Payload().(*somePayload).Test, e2.Payload().(*somePayload).Test)
 }

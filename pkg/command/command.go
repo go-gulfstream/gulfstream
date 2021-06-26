@@ -9,7 +9,6 @@ import (
 type Command struct {
 	id         uuid.UUID
 	streamID   uuid.UUID
-	owner      uuid.UUID
 	name       string
 	streamName string
 	createdAt  int64
@@ -20,7 +19,6 @@ func New(
 	name string,
 	streamName string,
 	streamID uuid.UUID,
-	owner uuid.UUID,
 	payload interface{},
 ) *Command {
 	return &Command{
@@ -28,7 +26,6 @@ func New(
 		name:       name,
 		streamID:   streamID,
 		streamName: streamName,
-		owner:      owner,
 		createdAt:  time.Now().Unix(),
 		payload:    payload,
 	}
@@ -60,10 +57,6 @@ func (c *Command) StreamID() uuid.UUID {
 
 func (c *Command) StreamName() string {
 	return c.streamName
-}
-
-func (c *Command) Owner() uuid.UUID {
-	return c.owner
 }
 
 func (c *Command) Payload() interface{} {

@@ -11,7 +11,7 @@ import (
 
 const (
 	magicNumber   = uint16(791)
-	containerSize = 60
+	containerSize = int(unsafe.Sizeof(Stream{})) - 24
 )
 
 var ErrInvalidInputData = errors.New("stream: unmarshal error: invalid data input")
@@ -31,7 +31,6 @@ func (s *Stream) MarshalBinary() (data []byte, err error) {
 		w.writePayloadSize,
 		w.writeNameSize,
 		w.writeID,
-		w.writeOwnerID,
 		w.writeName,
 		w.writeVersion,
 		w.writeUpdatedAt,
@@ -53,7 +52,6 @@ func (s *Stream) UnmarshalBinary(data []byte) error {
 		reader.readPayloadSize,
 		reader.readNameSize,
 		reader.readID,
-		reader.readOwnerID,
 		reader.readName,
 		reader.readVersion,
 		reader.readUpdatedAt,
@@ -98,10 +96,6 @@ func (w *writer) writeNameSize() error {
 
 func (w *writer) writeID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.id)
-}
-
-func (w *writer) writeOwnerID() error {
-	return binary.Write(w.buf, binary.LittleEndian, w.container.owner)
 }
 
 func (w *writer) writeName() error {
@@ -168,11 +162,6 @@ func (r *reader) readNameSize() error {
 func (r *reader) readID() error {
 	r.next(unsafe.Sizeof(r.container.id))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.id)
-}
-
-func (r *reader) readOwnerID() error {
-	r.next(unsafe.Sizeof(r.container.owner))
-	return binary.Read(r.reader, binary.LittleEndian, &r.container.owner)
 }
 
 func (r *reader) readVersion() error {

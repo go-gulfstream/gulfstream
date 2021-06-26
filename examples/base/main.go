@@ -75,7 +75,7 @@ func main() {
 	_, err = mutator.CommandSink(ctx, activateCmd)
 	checkError(err)
 
-	currentStream, err := streamStorage.Load(ctx, orderStream, streamID, owner)
+	currentStream, err := streamStorage.Load(ctx, orderStream, streamID)
 	checkError(err)
 
 	fmt.Printf("currentStream: %s\n", currentStream.State().(*order))
@@ -86,7 +86,6 @@ func main() {
 func blankStream() *stream.Stream {
 	return stream.New(
 		orderStream,
-		uuid.UUID{},
 		uuid.UUID{},
 		&order{},
 	)

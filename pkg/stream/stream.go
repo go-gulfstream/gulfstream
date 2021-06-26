@@ -11,7 +11,6 @@ import (
 
 type Stream struct {
 	id        uuid.UUID
-	owner     uuid.UUID
 	name      string
 	version   int
 	updatedAt int64
@@ -19,7 +18,7 @@ type Stream struct {
 	changes   []*event.Event
 }
 
-func New(name string, id uuid.UUID, owner uuid.UUID, initState State) *Stream {
+func New(name string, id uuid.UUID, initState State) *Stream {
 	if len(name) == 0 {
 		panic("no stream name")
 	}
@@ -28,7 +27,6 @@ func New(name string, id uuid.UUID, owner uuid.UUID, initState State) *Stream {
 		id:    id,
 		state: initState,
 		name:  name,
-		owner: owner,
 	}
 }
 
@@ -41,10 +39,6 @@ func Blank(name string, initState State) *Stream {
 		name:  name,
 		state: initState,
 	}
-}
-
-func (s *Stream) Owner() uuid.UUID {
-	return s.owner
 }
 
 func (s *Stream) Changes() []*event.Event {
@@ -80,7 +74,7 @@ func (s *Stream) Unix() int64 {
 }
 
 func (s *Stream) Mutate(eventName string, payload interface{}) {
-	e := event.New(eventName, s.name, s.id, s.owner, s.Version()+1, payload)
+	e := event.New(eventName, s.name, s.id, s.Version()+1, payload)
 	s.state.Mutate(e)
 	s.changes = append(s.changes, e)
 	s.updatedAt = time.Now().Unix()

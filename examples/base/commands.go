@@ -17,9 +17,9 @@ type addToCart struct {
 }
 
 func newAddToCartCommand(p *addToCart) *command.Command {
-	return command.New(addToCartCommand, orderStream, streamID, owner, p)
+	return command.New(addToCartCommand, orderStream, streamID, p)
 }
 
 func newActivateOrderCommand() *command.Command {
-	return command.New(activateCommand, orderStream, streamID, owner, nil)
+	return command.New(activateCommand, orderStream, streamID, nil)
 }

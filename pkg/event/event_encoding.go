@@ -72,7 +72,6 @@ func (c *Codec) decodeContainer(data []byte) (*Event, []byte, error) {
 		reader.readStreamSize,
 		reader.readID,
 		reader.readStreamID,
-		reader.readOwnerID,
 		reader.readName,
 		reader.readStreamName,
 		reader.readCreatedAt,
@@ -187,7 +186,6 @@ func (c *Codec) encodeContainer(e *Event, payload []byte) ([]byte, error) {
 		w.writeStreamSize,
 		w.writeID,
 		w.writeStreamID,
-		w.writeOwnerID,
 		w.writeName,
 		w.writeStreamName,
 		w.writeCreatedAt,
@@ -256,10 +254,6 @@ func (w *writer) writeID() error {
 
 func (w *writer) writeStreamID() error {
 	return binary.Write(w.buf, binary.LittleEndian, w.container.streamID)
-}
-
-func (w *writer) writeOwnerID() error {
-	return binary.Write(w.buf, binary.LittleEndian, w.container.owner)
 }
 
 func (w *writer) writeName() error {
@@ -345,11 +339,6 @@ func (r *reader) readID() error {
 func (r *reader) readStreamID() error {
 	r.next(unsafe.Sizeof(r.container.streamID))
 	return binary.Read(r.reader, binary.LittleEndian, &r.container.streamID)
-}
-
-func (r *reader) readOwnerID() error {
-	r.next(unsafe.Sizeof(r.container.owner))
-	return binary.Read(r.reader, binary.LittleEndian, &r.container.owner)
 }
 
 func (r *reader) readCreatedAt() error {

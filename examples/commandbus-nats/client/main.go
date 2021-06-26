@@ -50,18 +50,16 @@ func main() {
 				os.Exit(1)
 			}
 
-			log.Printf("[CLIENT:REPLY]=> %s stream=%s, sid=%s, owner=%s commandName=%s, v=%d\n",
+			log.Printf("[CLIENT:REPLY]=> %s stream=%s, sid=%s, commandName=%s, v=%d\n",
 				status(reply.Command() == createPartyCmd.ID()),
 				createPartyCmd.StreamName(),
 				createPartyCmd.StreamID(),
-				createPartyCmd.Owner(),
 				createPartyCmd.Name(),
 				reply.StreamVersion())
 
 			// add participant
 			addParticipantCommand := addParticipant(
 				createPartyCmd.StreamID(),
-				createPartyCmd.Owner(),
 				types.AddParticipant{
 					Name: "user",
 					Age:  16,
@@ -73,11 +71,10 @@ func main() {
 				os.Exit(1)
 			}
 
-			log.Printf("[CLIENT:REPLY]=> %s stream=%s, sid=%s, owner=%s commandName=%s, v=%d\n",
+			log.Printf("[CLIENT:REPLY]=> %s stream=%s, sid=%s, commandName=%s, v=%d\n",
 				status(reply.Command() == addParticipantCommand.ID()),
 				addParticipantCommand.StreamName(),
 				addParticipantCommand.StreamID(),
-				addParticipantCommand.Owner(),
 				addParticipantCommand.Name(),
 				reply.StreamVersion())
 
@@ -105,9 +102,9 @@ func checkError(err error) {
 }
 
 func createParty(p types.CreateNewParty) *command.Command {
-	return command.New(types.CreateNewPartyCommand, types.PartyStream, uuid.New(), uuid.New(), &p)
+	return command.New(types.CreateNewPartyCommand, types.PartyStream, uuid.New(), &p)
 }
 
-func addParticipant(streamID, owner uuid.UUID, p types.AddParticipant) *command.Command {
-	return command.New(types.AddParticipantCommand, types.PartyStream, streamID, owner, &p)
+func addParticipant(streamID uuid.UUID, p types.AddParticipant) *command.Command {
+	return command.New(types.AddParticipantCommand, types.PartyStream, streamID, &p)
 }

@@ -109,16 +109,8 @@ func (m *Mutator) CommandSink(ctx context.Context, cmd *command.Command) (*comma
 		if cmd.StreamID() != uuid.Nil {
 			stream.id = cmd.StreamID()
 		}
-		// replace owner from command if needed.
-		if cmd.Owner() != uuid.Nil {
-			stream.owner = cmd.Owner()
-		}
 	} else {
-		stream, err = m.storage.Load(ctx,
-			cmd.StreamName(),
-			cmd.StreamID(),
-			cmd.Owner(),
-		)
+		stream, err = m.storage.Load(ctx, cmd.StreamName(), cmd.StreamID())
 		if err != nil {
 			return nil, err
 		}
@@ -166,11 +158,7 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) error {
 		return nil
 	}
 	for _, owner := range owners {
-		stream, err := m.storage.Load(ctx,
-			m.streamName,
-			owner.StreamID,
-			owner.Owner,
-		)
+		stream, err := m.storage.Load(ctx, m.streamName, owner.StreamID)
 		if err != nil {
 			return err
 		}
