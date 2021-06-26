@@ -18,7 +18,7 @@ type CommandController interface {
 }
 
 type EventController interface {
-	PickOwners(*event.Event) []Owner
+	PickOwner(*event.Event) []Owner
 	EventSink(context.Context, *Stream, *event.Event) error
 }
 
@@ -161,7 +161,7 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) error {
 	if !found || m.isMySelfEvent(e) {
 		return nil
 	}
-	owners := ec.controller.PickOwners(e)
+	owners := ec.controller.PickOwner(e)
 	if len(owners) == 0 {
 		return nil
 	}

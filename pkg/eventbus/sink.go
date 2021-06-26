@@ -12,24 +12,19 @@ type Sinker interface {
 	EventSink(ctx context.Context, e *event.Event) error
 }
 
-func Mutator(mutator *stream.Mutator) stream.EventHandler {
-	return eventBus{
+func MutatorHandler(mutator *stream.Mutator) stream.EventHandler {
+	return mutatorHandler{
 		mutator: mutator,
 	}
 }
 
-type eventBus struct {
+type mutatorHandler struct {
 	mutator *stream.Mutator
 }
 
-func (eb eventBus) Match(_ string) bool {
-	return true
-}
+func (mutatorHandler) Match(_ string) bool { return true }
 
-func (eb eventBus) Handle(ctx context.Context, e *event.Event) error {
+func (eb mutatorHandler) Handle(ctx context.Context, e *event.Event) error {
 	return eb.mutator.EventSink(ctx, e)
 }
-
-func (eb eventBus) Rollback(context.Context, *event.Event) error {
-	return nil
-}
+func (mutatorHandler) Rollback(context.Context, *event.Event) error { return nil }
