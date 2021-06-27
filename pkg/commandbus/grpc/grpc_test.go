@@ -35,7 +35,7 @@ func TestClientServer(t *testing.T) {
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
-		}), stream.CreateMode())
+		}), stream.WithCommandControllerCreateIfNotExists())
 
 	ctx := context.Background()
 
@@ -75,7 +75,7 @@ func TestServerInterceptors(t *testing.T) {
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
-		}), stream.CreateMode())
+		}), stream.WithCommandControllerCreateIfNotExists())
 
 	ctx := context.Background()
 	schema := "bearer"

@@ -29,7 +29,7 @@ func main() {
 	mutator.AddCommandController(
 		types.CreateNewPartyCommand,
 		CreatePartyController(mutation),
-		stream.CreateMode())
+		stream.WithCommandControllerCreateIfNotExists())
 
 	mutator.AddCommandController(
 		types.AddParticipantCommand,

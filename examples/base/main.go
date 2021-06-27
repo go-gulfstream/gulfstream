@@ -55,7 +55,7 @@ func main() {
 	)
 
 	mutator.AddCommandController(addToCartCommand,
-		newAddToCartController(idx), stream.CreateMode())
+		newAddToCartController(idx), stream.WithCommandControllerCreateIfNotExists())
 
 	mutator.AddCommandController(activateCommand,
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, command *command.Command) (*command.Reply, error) {

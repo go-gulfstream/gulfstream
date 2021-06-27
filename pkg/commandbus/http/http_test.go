@@ -25,7 +25,7 @@ func TestClientServer(t *testing.T) {
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
-		}), stream.CreateMode())
+		}), stream.WithCommandControllerCreateIfNotExists())
 
 	// setup server side
 	httpServer := NewServer(mutation)
@@ -51,7 +51,7 @@ func TestServerMiddleware(t *testing.T) {
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
-		}), stream.CreateMode())
+		}), stream.WithCommandControllerCreateIfNotExists())
 	httpServer := NewServer(mutation)
 	middleware := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		owner := r.Header.Get("X-Owner")
