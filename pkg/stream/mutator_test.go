@@ -88,7 +88,7 @@ func TestMutator_EventSinkPickOneStream(t *testing.T) {
 	storage.EXPECT().Load(ctx, userStream.Name(), userID).Return(userStream, nil)
 	storage.EXPECT().Persist(ctx, userStream).Return(nil)
 
-	publisher.EXPECT().Publish(ctx, gomock.Any()).Return(nil)
+	publisher.EXPECT().Publish(gomock.Any()).Return(nil)
 
 	// users stream
 	usersMutator := stream.NewMutator(

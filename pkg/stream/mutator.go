@@ -166,7 +166,7 @@ func (m *Mutator) CommandSink(ctx context.Context, cmd *command.Command) (*comma
 	if err := m.storage.Persist(ctx, stream); err != nil {
 		return nil, err
 	}
-	if err := m.publisher.Publish(ctx, stream.changes); err != nil {
+	if err := m.publisher.Publish(stream.changes); err != nil {
 		return nil, multierror.Append(err, m.storage.MarkUnpublished(ctx, stream))
 	}
 	stream.ClearChanges()
@@ -262,7 +262,7 @@ func (m *Mutator) eventSink(ctx context.Context, ec *eventController, s *Stream,
 	if err := m.storage.Persist(ctx, s); err != nil {
 		return err
 	}
-	if err := m.publisher.Publish(ctx, s.Changes()); err != nil {
+	if err := m.publisher.Publish(s.Changes()); err != nil {
 		return multierror.Append(err, m.storage.MarkUnpublished(ctx, s))
 	}
 	s.ClearChanges()

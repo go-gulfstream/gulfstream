@@ -7,11 +7,11 @@ import (
 )
 
 type Publisher interface {
-	Publish(ctx context.Context, event []*event.Event) error
+	Publish(event []*event.Event) error
 }
 
 type Subscriber interface {
-	Subscribe(ctx context.Context, streamName string, h ...EventHandler)
+	Subscribe(streamName string, h ...EventHandler)
 }
 
 type EventHandler interface {

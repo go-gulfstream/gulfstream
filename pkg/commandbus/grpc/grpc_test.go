@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	mockstream "github.com/go-gulfstream/gulfstream/mocks/stream"
+	"github.com/golang/mock/gomock"
+
 	"github.com/go-gulfstream/gulfstream/pkg/storage"
 
 	"google.golang.org/grpc/metadata"
@@ -30,8 +33,9 @@ import (
 )
 
 func TestClientServer(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	// setup stream controllers
-	mutation := newMutation()
+	mutation := newMutation(ctrl)
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
@@ -67,11 +71,13 @@ func TestClientServer(t *testing.T) {
 }
 
 func TestServerInterceptors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
 	validID := uuid.New()
 	invalidID := uuid.New()
 
 	// setup stream controllers
-	mutation := newMutation()
+	mutation := newMutation(ctrl)
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
@@ -154,11 +160,12 @@ func listen(t *testing.T) (string, net.Listener) {
 	return addr, l
 }
 
-func newMutation() *stream.Mutator {
+func newMutation(ctrl *gomock.Controller) *stream.Mutator {
+	publisher := mockstream.NewMockPublisher(ctrl)
 	stor := storage.New(func() *stream.Stream {
 		return stream.Blank("one", &state{One: "one", Two: "two"})
 	})
-	return stream.NewMutator("order", stor, mockPublisher{})
+	return stream.NewMutator("order", stor, publisher)
 }
 
 // current state of the order stream.
@@ -176,12 +183,6 @@ func (s *state) MarshalBinary() ([]byte, error) {
 
 func (s *state) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, s)
-}
-
-type mockPublisher struct{}
-
-func (mockPublisher) Publish(ctx context.Context, event []*event.Event) error {
-	return nil
 }
 
 func authFromMD(ctx context.Context, expectedScheme string) (string, error) {

@@ -16,18 +16,18 @@ type ServerErrorHandler func(err error)
 type Server struct {
 	UnimplementedCommandBusServer
 	commandCodec command.Encoding
-	mutation     commandbus.Sinker
+	mutator      commandbus.Sinker
 	contextFunc  []ContextFunc
 	requestFunc  []ServerRequestFunc
 	errorHandler []ServerErrorHandler
 }
 
 func NewServer(
-	mutation commandbus.Sinker,
+	mutator commandbus.Sinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{
-		mutation: mutation,
+		mutator: mutator,
 	}
 	for _, opt := range opts {
 		opt(srv)
@@ -85,7 +85,7 @@ func (s *Server) CommandSink(ctx context.Context, req *Request) (*Response, erro
 	if err != nil {
 		return s.writeError(err), nil
 	}
-	reply, err := s.mutation.CommandSink(ctx, cmd)
+	reply, err := s.mutator.CommandSink(ctx, cmd)
 	if err != nil {
 		return s.writeError(err), nil
 	}

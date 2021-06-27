@@ -16,7 +16,7 @@ type ContextFunc func(ctx context.Context) context.Context
 type ServerErrorHandler func(err error)
 
 type Server struct {
-	mutation     commandbus.Sinker
+	mutator      commandbus.Sinker
 	commandCodec command.Encoding
 	requestFunc  []ServerRequestFunc
 	responseFunc []ServerResponseFunc
@@ -25,11 +25,11 @@ type Server struct {
 }
 
 func NewServer(
-	mutation commandbus.Sinker,
+	mutator commandbus.Sinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{
-		mutation:     mutation,
+		mutator:      mutator,
 		requestFunc:  []ServerRequestFunc{},
 		responseFunc: []ServerResponseFunc{},
 	}
@@ -96,7 +96,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		reqFunc(r, cmd)
 	}
 
-	reply, err := s.mutation.CommandSink(ctx, cmd)
+	reply, err := s.mutator.CommandSink(ctx, cmd)
 	if err != nil {
 		s.writeError(w, err)
 		return

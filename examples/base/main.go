@@ -25,7 +25,7 @@ func main() {
 	idx := new(someLocalIndexInMem)
 
 	channel := eventbus.NewChannel()
-	channel.Subscribe(ctx, orderStream,
+	channel.Subscribe(orderStream,
 		eventbus.HandlerFunc(addedToCartEvent,
 			func(ctx context.Context, e *event.Event) error {
 				idx.Increment()
@@ -35,7 +35,7 @@ func main() {
 			}, nil),
 	)
 
-	channel.Subscribe(ctx, orderStream,
+	channel.Subscribe(orderStream,
 		eventbus.HandlerFunc(activatedEvent,
 			func(ctx context.Context, e *event.Event) error {
 				fmt.Printf("event: activated\nversion: %d\nstream: %s\n",

@@ -18,7 +18,7 @@ type ServerErrorHandler func(msg *nats.Msg, err error)
 
 type Server struct {
 	subject      string
-	mutation     commandbus.Sinker
+	mutator      commandbus.Sinker
 	commandCodec command.Encoding
 	requestFunc  []ServerRequestFunc
 	responseFunc []ServerResponseFunc
@@ -28,12 +28,12 @@ type Server struct {
 
 func NewServer(
 	subject string,
-	mutation commandbus.Sinker,
+	mutator commandbus.Sinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{
-		subject:  toSubj(subject),
-		mutation: mutation,
+		subject: toSubj(subject),
+		mutator: mutator,
 	}
 	for _, opt := range opts {
 		opt(srv)
@@ -108,7 +108,7 @@ func (s *Server) handleMsg(msg *nats.Msg) []byte {
 		reqFunc(msg.Header, cmd)
 	}
 
-	reply, err := s.mutation.CommandSink(ctx, cmd)
+	reply, err := s.mutator.CommandSink(ctx, cmd)
 	if err != nil {
 		return s.writeError(msg, err)
 	}

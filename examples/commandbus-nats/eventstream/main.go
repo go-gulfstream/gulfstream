@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -67,7 +66,7 @@ func checkError(err error) {
 
 type customPublisher struct{}
 
-func (customPublisher) Publish(_ context.Context, events []*event.Event) error {
+func (customPublisher) Publish(events []*event.Event) error {
 	for _, e := range events {
 		log.Printf("[SERVER:PUBLISHEVENT]=> publish{stream=%s, sid=%s,  eventName=%s, payload=%v}\n",
 			e.StreamName(), e.StreamID(), e.Name(), e.Payload())

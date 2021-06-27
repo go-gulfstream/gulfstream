@@ -85,7 +85,7 @@ func WithChannelErrorHandler(h stream.EventErrorHandler) Option {
 	}
 }
 
-func (b *Channel) Publish(_ context.Context, events []*event.Event) error {
+func (b *Channel) Publish(events []*event.Event) error {
 	for _, e := range events {
 		channel, ok := b.channels[e.StreamName()]
 		if !ok {
@@ -97,7 +97,7 @@ func (b *Channel) Publish(_ context.Context, events []*event.Event) error {
 	return nil
 }
 
-func (b *Channel) Subscribe(_ context.Context, streamName string, handlers ...stream.EventHandler) {
+func (b *Channel) Subscribe(streamName string, handlers ...stream.EventHandler) {
 	channel, ok := b.channels[streamName]
 	if !ok {
 		channel = newChannel(b.partitions, streamName)

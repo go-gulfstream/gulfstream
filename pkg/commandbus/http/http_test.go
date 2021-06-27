@@ -2,10 +2,12 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	mockstream "github.com/go-gulfstream/gulfstream/mocks/stream"
+	"github.com/golang/mock/gomock"
 
 	"github.com/go-gulfstream/gulfstream/pkg/storage"
 
@@ -14,14 +16,13 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/command"
 	"github.com/google/uuid"
 
-	"github.com/go-gulfstream/gulfstream/pkg/event"
-
 	"github.com/go-gulfstream/gulfstream/pkg/stream"
 )
 
 func TestClientServer(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	// setup stream controllers
-	mutation := newMutation()
+	mutation := newMutation(ctrl)
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
@@ -45,9 +46,10 @@ func TestClientServer(t *testing.T) {
 }
 
 func TestServerMiddleware(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	validID := uuid.New()
 	invalidID := uuid.New()
-	mutation := newMutation()
+	mutation := newMutation(ctrl)
 	mutation.AddCommandController("action",
 		stream.ControllerFunc(func(ctx context.Context, s *stream.Stream, c *command.Command) (*command.Reply, error) {
 			return c.ReplyOk(12), nil
@@ -83,30 +85,11 @@ func TestServerMiddleware(t *testing.T) {
 	assert.Nil(t, reply)
 }
 
-func newMutation() *stream.Mutator {
+func newMutation(ctrl *gomock.Controller) *stream.Mutator {
+	publisher := mockstream.NewMockPublisher(ctrl)
+	state := mockstream.NewMockState(ctrl)
 	store := storage.New(func() *stream.Stream {
-		return stream.Blank("one", &state{One: "one"})
+		return stream.Blank("one", state)
 	})
-	return stream.NewMutator("order", store, mockPublisher{})
-}
-
-type state struct {
-	One string
-	Two string
-}
-
-func (s *state) Mutate(*event.Event) {}
-
-func (s *state) MarshalBinary() ([]byte, error) {
-	return json.Marshal(s)
-}
-
-func (s *state) UnmarshalBinary(data []byte) error {
-	return json.Unmarshal(data, s)
-}
-
-type mockPublisher struct{}
-
-func (mockPublisher) Publish(ctx context.Context, event []*event.Event) error {
-	return nil
+	return stream.NewMutator("order", store, publisher)
 }

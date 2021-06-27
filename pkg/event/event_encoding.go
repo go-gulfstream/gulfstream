@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	containerSize = int(unsafe.Sizeof(Event{})) - 24
+	containerSize = int(unsafe.Sizeof(Event{})) - 26
 	magicNumber   = uint16(129)
 )
 

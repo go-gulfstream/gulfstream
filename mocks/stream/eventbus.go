@@ -36,17 +36,17 @@ func (m *MockPublisher) EXPECT() *MockPublisherMockRecorder {
 }
 
 // Publish mocks base method
-func (m *MockPublisher) Publish(ctx context.Context, event []*event.Event) error {
+func (m *MockPublisher) Publish(event []*event.Event) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Publish", ctx, event)
+	ret := m.ctrl.Call(m, "Publish", event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Publish indicates an expected call of Publish
-func (mr *MockPublisherMockRecorder) Publish(ctx, event interface{}) *gomock.Call {
+func (mr *MockPublisherMockRecorder) Publish(event interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockPublisher)(nil).Publish), ctx, event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockPublisher)(nil).Publish), event)
 }
 
 // MockSubscriber is a mock of Subscriber interface
@@ -73,9 +73,9 @@ func (m *MockSubscriber) EXPECT() *MockSubscriberMockRecorder {
 }
 
 // Subscribe mocks base method
-func (m *MockSubscriber) Subscribe(ctx context.Context, streamName string, h ...stream.EventHandler) {
+func (m *MockSubscriber) Subscribe(streamName string, h ...stream.EventHandler) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, streamName}
+	varargs := []interface{}{streamName}
 	for _, a := range h {
 		varargs = append(varargs, a)
 	}
@@ -83,9 +83,9 @@ func (m *MockSubscriber) Subscribe(ctx context.Context, streamName string, h ...
 }
 
 // Subscribe indicates an expected call of Subscribe
-func (mr *MockSubscriberMockRecorder) Subscribe(ctx, streamName interface{}, h ...interface{}) *gomock.Call {
+func (mr *MockSubscriberMockRecorder) Subscribe(streamName interface{}, h ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, streamName}, h...)
+	varargs := append([]interface{}{streamName}, h...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockSubscriber)(nil).Subscribe), varargs...)
 }
 
