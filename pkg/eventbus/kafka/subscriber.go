@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/go-gulfstream/gulfstream/pkg/eventbus"
+
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/google/uuid"
@@ -28,6 +30,7 @@ type Subscriber struct {
 	cleanupFunc   []func(sarama.ConsumerGroupSession) error
 	errorFunc     []func(*event.Event, error)
 	beforeFunc    []func(*sarama.ConsumerMessage) (bool, error)
+	deduplicator  eventbus.Deduplicator
 	group         string
 	ready         chan error
 }
@@ -57,6 +60,12 @@ type SubscriberOption func(*Subscriber)
 func WithSubscriberGroupName(groupName string) SubscriberOption {
 	return func(s *Subscriber) {
 		s.group = groupName
+	}
+}
+
+func WithSubscriberDeduplicator(d eventbus.Deduplicator) SubscriberOption {
+	return func(s *Subscriber) {
+		s.deduplicator = d
 	}
 }
 
@@ -204,6 +213,15 @@ func (s *Subscriber) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 			s.errorHandle(nil, err)
 			continue
 		}
+		hasVisit, err := s.hasVisit(ctx, e)
+		if err != nil {
+			s.errorHandle(nil, err)
+			continue
+		}
+		if hasVisit {
+			session.MarkMessage(message, "")
+			continue
+		}
 		rollback := -1
 		for i, recv := range handlers {
 			if !recv.Match(e.Name()) {
@@ -230,10 +248,28 @@ func (s *Subscriber) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 			}
 		}
 		if err == nil {
+			if err := s.setVisit(ctx, e); err != nil {
+				s.errorHandle(e, err)
+				continue
+			}
 			session.MarkMessage(message, "")
 		}
 	}
 	return nil
+}
+
+func (s *Subscriber) setVisit(ctx context.Context, e *event.Event) error {
+	if s.deduplicator == nil {
+		return nil
+	}
+	return s.deduplicator.SetVisit(ctx, e)
+}
+
+func (s *Subscriber) hasVisit(ctx context.Context, e *event.Event) (bool, error) {
+	if s.deduplicator == nil {
+		return false, nil
+	}
+	return s.deduplicator.HasVisit(ctx, e)
 }
 
 func (s *Subscriber) decodeEvent(data []byte) (*event.Event, error) {
