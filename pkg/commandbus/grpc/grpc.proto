@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "pkg/commandbus/grpc";
+
+service CommandBus {
+  rpc CommandSink(Request) returns (Response) {}
+}
+
+message Request {
+  bytes data = 1;
+}
+
+message Response {
+  bytes data = 1;
+  string error = 2;
+}
