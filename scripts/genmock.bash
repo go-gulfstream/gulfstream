@@ -5,6 +5,7 @@ declare -a mocks=(
 "stream/eventbus"
 "stream/mutator"
 "stream/state"
+"stream/journal"
 )
 for i in "${mocks[@]}"
 do
