@@ -51,30 +51,30 @@ func (mr *MockJournalMockRecorder) Append(ctx, e, expectedVersion interface{}) *
 }
 
 // Load mocks base method
-func (m *MockJournal) Load(ctx context.Context, streamName string, streamID uuid.UUID, fromVersion int) ([]*event.Event, error) {
+func (m *MockJournal) Load(ctx context.Context, streamName string, streamID uuid.UUID) ([]*event.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Load", ctx, streamName, streamID, fromVersion)
+	ret := m.ctrl.Call(m, "Load", ctx, streamName, streamID)
 	ret0, _ := ret[0].([]*event.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Load indicates an expected call of Load
-func (mr *MockJournalMockRecorder) Load(ctx, streamName, streamID, fromVersion interface{}) *gomock.Call {
+func (mr *MockJournalMockRecorder) Load(ctx, streamName, streamID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockJournal)(nil).Load), ctx, streamName, streamID, fromVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockJournal)(nil).Load), ctx, streamName, streamID)
 }
 
 // Walk mocks base method
-func (m *MockJournal) Walk(ctx context.Context, streamName string, streamID uuid.UUID, fromVersion int, fn stream.WalkFunc) error {
+func (m *MockJournal) Walk(ctx context.Context, streamName string, streamID uuid.UUID, fn stream.WalkFunc) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Walk", ctx, streamName, streamID, fromVersion, fn)
+	ret := m.ctrl.Call(m, "Walk", ctx, streamName, streamID, fn)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Walk indicates an expected call of Walk
-func (mr *MockJournalMockRecorder) Walk(ctx, streamName, streamID, fromVersion, fn interface{}) *gomock.Call {
+func (mr *MockJournalMockRecorder) Walk(ctx, streamName, streamID, fn interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Walk", reflect.TypeOf((*MockJournal)(nil).Walk), ctx, streamName, streamID, fromVersion, fn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Walk", reflect.TypeOf((*MockJournal)(nil).Walk), ctx, streamName, streamID, fn)
 }

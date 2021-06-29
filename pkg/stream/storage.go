@@ -21,7 +21,7 @@ type StorageWithJournal struct {
 	txn     TxnFunc
 }
 
-func NewStorageWithJournal(storage Storage, journal Journal, txn TxnFunc) Storage {
+func NewStorageWithJournal(storage Storage, journal Journal, txn TxnFunc) StorageWithJournal {
 	return StorageWithJournal{
 		storage: storage,
 		journal: journal,

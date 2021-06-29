@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const placeholderThreshold = 100
+
 type Stream struct {
 	id        uuid.UUID
 	name      string
@@ -31,14 +33,7 @@ func New(name string, id uuid.UUID, initState State) *Stream {
 }
 
 func Blank(name string, initState State) *Stream {
-	if len(name) == 0 {
-		panic("no stream name")
-	}
-	checkPtr(initState)
-	return &Stream{
-		name:  name,
-		state: initState,
-	}
+	return New(name, uuid.UUID{}, initState)
 }
 
 func (s *Stream) Changes() []*event.Event {
@@ -74,10 +69,18 @@ func (s *Stream) Unix() int64 {
 }
 
 func (s *Stream) Mutate(eventName string, payload interface{}) {
-	e := event.New(eventName, s.name, s.id, s.Version()+1, payload)
+	version := s.Version() + 1
+	if s.isPlaceholderVersion() {
+		version++
+	}
+	e := event.New(eventName, s.name, s.id, version, payload)
 	s.state.Mutate(e)
 	s.changes = append(s.changes, e)
 	s.updatedAt = time.Now().Unix()
+}
+
+func (s *Stream) isPlaceholderVersion() bool {
+	return s.Version()+1%placeholderThreshold == 0
 }
 
 func RestoreFromEvent(s *Stream, event *event.Event) {
