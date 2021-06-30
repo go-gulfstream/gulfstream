@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/go-gulfstream/gulfstream/pkg/command"
+	"github.com/go-gulfstream/gulfstream/pkg/stream"
 
-	"github.com/go-gulfstream/gulfstream/pkg/commandbus"
+	"github.com/go-gulfstream/gulfstream/pkg/command"
 )
 
 type ServerRequestFunc func(r *http.Request, c *command.Command)
@@ -16,7 +16,7 @@ type ContextFunc func(ctx context.Context) context.Context
 type ServerErrorHandler func(err error)
 
 type Server struct {
-	mutator      commandbus.Sinker
+	mutator      stream.CommandSinker
 	commandCodec command.Encoding
 	requestFunc  []ServerRequestFunc
 	responseFunc []ServerResponseFunc
@@ -25,7 +25,7 @@ type Server struct {
 }
 
 func NewServer(
-	mutator commandbus.Sinker,
+	mutator stream.CommandSinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{

@@ -3,10 +3,11 @@ package grpc
 import (
 	"context"
 
+	"github.com/go-gulfstream/gulfstream/pkg/stream"
+
 	"google.golang.org/grpc/metadata"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
-	"github.com/go-gulfstream/gulfstream/pkg/commandbus"
 	"google.golang.org/grpc"
 )
 
@@ -16,14 +17,14 @@ type ServerErrorHandler func(err error)
 type Server struct {
 	UnimplementedCommandBusServer
 	commandCodec command.Encoding
-	mutator      commandbus.Sinker
+	mutator      stream.CommandSinker
 	contextFunc  []ContextFunc
 	requestFunc  []ServerRequestFunc
 	errorHandler []ServerErrorHandler
 }
 
 func NewServer(
-	mutator commandbus.Sinker,
+	mutator stream.CommandSinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{

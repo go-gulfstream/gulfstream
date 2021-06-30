@@ -3,9 +3,9 @@ package nats
 import (
 	"context"
 
-	"github.com/go-gulfstream/gulfstream/pkg/command"
-	"github.com/go-gulfstream/gulfstream/pkg/commandbus"
+	"github.com/go-gulfstream/gulfstream/pkg/stream"
 
+	"github.com/go-gulfstream/gulfstream/pkg/command"
 	"github.com/nats-io/nats.go"
 )
 
@@ -18,7 +18,7 @@ type ServerErrorHandler func(msg *nats.Msg, err error)
 
 type Server struct {
 	subject      string
-	mutator      commandbus.Sinker
+	mutator      stream.CommandSinker
 	commandCodec command.Encoding
 	requestFunc  []ServerRequestFunc
 	responseFunc []ServerResponseFunc
@@ -28,7 +28,7 @@ type Server struct {
 
 func NewServer(
 	subject string,
-	mutator commandbus.Sinker,
+	mutator stream.CommandSinker,
 	opts ...ServerOption,
 ) *Server {
 	srv := &Server{

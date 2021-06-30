@@ -35,7 +35,3 @@ services:
       - zoo1
     networks:
       - gulfstream
-
-networks:
-  gulfstream:
-    driver: bridge

@@ -22,6 +22,14 @@ type EventController interface {
 	EventSink(context.Context, *Stream, *event.Event) error
 }
 
+type EventSinker interface {
+	EventSink(ctx context.Context, e *event.Event) error
+}
+
+type CommandSinker interface {
+	CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error)
+}
+
 type Picker struct {
 	StreamID  uuid.UUID
 	StreamIDs []uuid.UUID

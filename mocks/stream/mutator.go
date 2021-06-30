@@ -101,3 +101,78 @@ func (mr *MockEventControllerMockRecorder) EventSink(arg0, arg1, arg2 interface{
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventSink", reflect.TypeOf((*MockEventController)(nil).EventSink), arg0, arg1, arg2)
 }
+
+// MockEventSinker is a mock of EventSinker interface
+type MockEventSinker struct {
+	ctrl     *gomock.Controller
+	recorder *MockEventSinkerMockRecorder
+}
+
+// MockEventSinkerMockRecorder is the mock recorder for MockEventSinker
+type MockEventSinkerMockRecorder struct {
+	mock *MockEventSinker
+}
+
+// NewMockEventSinker creates a new mock instance
+func NewMockEventSinker(ctrl *gomock.Controller) *MockEventSinker {
+	mock := &MockEventSinker{ctrl: ctrl}
+	mock.recorder = &MockEventSinkerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockEventSinker) EXPECT() *MockEventSinkerMockRecorder {
+	return m.recorder
+}
+
+// EventSink mocks base method
+func (m *MockEventSinker) EventSink(ctx context.Context, e *event.Event) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EventSink", ctx, e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EventSink indicates an expected call of EventSink
+func (mr *MockEventSinkerMockRecorder) EventSink(ctx, e interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventSink", reflect.TypeOf((*MockEventSinker)(nil).EventSink), ctx, e)
+}
+
+// MockCommandSinker is a mock of CommandSinker interface
+type MockCommandSinker struct {
+	ctrl     *gomock.Controller
+	recorder *MockCommandSinkerMockRecorder
+}
+
+// MockCommandSinkerMockRecorder is the mock recorder for MockCommandSinker
+type MockCommandSinkerMockRecorder struct {
+	mock *MockCommandSinker
+}
+
+// NewMockCommandSinker creates a new mock instance
+func NewMockCommandSinker(ctrl *gomock.Controller) *MockCommandSinker {
+	mock := &MockCommandSinker{ctrl: ctrl}
+	mock.recorder = &MockCommandSinkerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockCommandSinker) EXPECT() *MockCommandSinkerMockRecorder {
+	return m.recorder
+}
+
+// CommandSink mocks base method
+func (m *MockCommandSinker) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommandSink", ctx, cmd)
+	ret0, _ := ret[0].(*command.Reply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommandSink indicates an expected call of CommandSink
+func (mr *MockCommandSinkerMockRecorder) CommandSink(ctx, cmd interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommandSink", reflect.TypeOf((*MockCommandSinker)(nil).CommandSink), ctx, cmd)
+}

@@ -8,18 +8,14 @@ import (
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 )
 
-type Sinker interface {
-	EventSink(ctx context.Context, e *event.Event) error
-}
-
-func MutatorHandler(mutator *stream.Mutator) stream.EventHandler {
+func MutatorHandler(mutator stream.EventSinker) stream.EventHandler {
 	return mutatorHandler{
 		mutator: mutator,
 	}
 }
 
 type mutatorHandler struct {
-	mutator *stream.Mutator
+	mutator stream.EventSinker
 }
 
 func (mutatorHandler) Match(_ string) bool { return true }
