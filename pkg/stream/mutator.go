@@ -68,7 +68,6 @@ type (
 )
 
 type Mutator struct {
-	streamName         string
 	storage            Storage
 	publisher          Publisher
 	commandControllers map[string]*commandController
@@ -78,13 +77,11 @@ type Mutator struct {
 }
 
 func NewMutator(
-	streamName string,
 	storage Storage,
 	publisher Publisher,
 	opts ...MutatorOption,
 ) *Mutator {
 	m := &Mutator{
-		streamName:         streamName,
 		storage:            storage,
 		publisher:          publisher,
 		commandControllers: make(map[string]*commandController),
@@ -136,27 +133,27 @@ func (m *Mutator) AddEventController(
 
 func (m *Mutator) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
 	if cmd == nil {
-		return nil, fmt.Errorf("command struct is nil pointer")
+		return nil, fmt.Errorf("stream: mutator.CommandSink command struct is nil pointer")
 	}
-	if m.streamName != cmd.StreamName() {
-		return nil, fmt.Errorf("stream mismatch: got %s, expected %s",
-			cmd.StreamName(), m.streamName)
+	if m.storage.StreamName() != cmd.StreamName() {
+		return nil, fmt.Errorf("stream: mutator.CommandSink mismatch stream names got %s, expected %s",
+			cmd.StreamName(), m.storage.StreamName())
 	}
 	cc, found := m.commandControllers[cmd.Name()]
 	if !found {
-		return nil, fmt.Errorf("mutator: controller for command %s.%s not found",
+		return nil, fmt.Errorf("stream: mutator.CommandSink controller for command %s.%s not found",
 			cmd.StreamName(), cmd.Name())
 	}
 	var stream *Stream
 	var err error
 	if cc.createStream {
-		stream = m.storage.BlankStream()
+		stream = m.storage.NewStream()
 		// replace stream id from command if needed.
 		if cmd.StreamID() != uuid.Nil {
 			stream.id = cmd.StreamID()
 		}
 	} else {
-		stream, err = m.storage.Load(ctx, cmd.StreamName(), cmd.StreamID())
+		stream, err = m.storage.Load(ctx, cmd.StreamID())
 		if err != nil {
 			return nil, err
 		}
@@ -200,13 +197,13 @@ func (m *Mutator) isMySelfEvent(e *event.Event) bool {
 func (m *Mutator) EventSink(ctx context.Context, e *event.Event) (err error) {
 	if e == nil {
 		if m.strict {
-			err = fmt.Errorf("event struct is nil pointer")
+			err = fmt.Errorf("stream: mutator.EventSink event struct is nil pointer")
 		}
 		return
 	}
 	if m.isMySelfEvent(e) {
 		if m.strict {
-			err = fmt.Errorf("mutator: event cycles %s.%s",
+			err = fmt.Errorf("stream: mutator.EventSink event cycles %s.%s",
 				e.StreamName(), e.Name())
 		}
 		return
@@ -214,7 +211,7 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) (err error) {
 	ec, found := m.eventControllers[e.Name()]
 	if !found {
 		if m.strict {
-			err = fmt.Errorf("mutator: controller for event %s.%s not found",
+			err = fmt.Errorf("stream: mutator.EventSink controller for event %s.%s not found",
 				e.StreamName(), e.Name())
 		}
 		return
@@ -223,8 +220,8 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) (err error) {
 	streamPicker := ec.controller.PickStream(e)
 	if streamPicker.isEmpty() {
 		if m.strict {
-			err = fmt.Errorf("mutator: pick stream error %s.%s",
-				m.streamName, e.Name())
+			err = fmt.Errorf("stream: mutator.EventSink pick stream error %s.%s",
+				m.storage.StreamName(), e.Name())
 		}
 		return
 	}
@@ -254,9 +251,9 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) (err error) {
 
 func (m *Mutator) loadStreamFromEvent(ctx context.Context, streamID uuid.UUID, createStream bool) (*Stream, error) {
 	if createStream {
-		return m.storage.BlankStream(), nil
+		return m.storage.NewStream(), nil
 	} else {
-		return m.storage.Load(ctx, m.streamName, streamID)
+		return m.storage.Load(ctx, streamID)
 	}
 }
 

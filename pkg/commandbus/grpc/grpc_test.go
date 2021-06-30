@@ -162,10 +162,10 @@ func listen(t *testing.T) (string, net.Listener) {
 
 func newMutation(ctrl *gomock.Controller) *stream.Mutator {
 	publisher := mockstream.NewMockPublisher(ctrl)
-	stor := storage.New(func() *stream.Stream {
+	stor := storage.New("order", func() *stream.Stream {
 		return stream.Blank("one", &state{One: "one", Two: "two"})
 	})
-	return stream.NewMutator("order", stor, publisher)
+	return stream.NewMutator(stor, publisher)
 }
 
 // current state of the order stream.

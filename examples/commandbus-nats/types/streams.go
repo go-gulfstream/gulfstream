@@ -1,3 +1,3 @@
 package types
 
-const PartyStream = "partyStream"
+const PartyStreamName = "partyStream"

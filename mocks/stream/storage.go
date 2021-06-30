@@ -35,18 +35,32 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
-// BlankStream mocks base method
-func (m *MockStorage) BlankStream() *stream.Stream {
+// StreamName mocks base method
+func (m *MockStorage) StreamName() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlankStream")
+	ret := m.ctrl.Call(m, "StreamName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// StreamName indicates an expected call of StreamName
+func (mr *MockStorageMockRecorder) StreamName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamName", reflect.TypeOf((*MockStorage)(nil).StreamName))
+}
+
+// NewStream mocks base method
+func (m *MockStorage) NewStream() *stream.Stream {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewStream")
 	ret0, _ := ret[0].(*stream.Stream)
 	return ret0
 }
 
-// BlankStream indicates an expected call of BlankStream
-func (mr *MockStorageMockRecorder) BlankStream() *gomock.Call {
+// NewStream indicates an expected call of NewStream
+func (mr *MockStorageMockRecorder) NewStream() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlankStream", reflect.TypeOf((*MockStorage)(nil).BlankStream))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewStream", reflect.TypeOf((*MockStorage)(nil).NewStream))
 }
 
 // Persist mocks base method
@@ -64,18 +78,32 @@ func (mr *MockStorageMockRecorder) Persist(ctx, s interface{}) *gomock.Call {
 }
 
 // Load mocks base method
-func (m *MockStorage) Load(ctx context.Context, streamName string, streamID uuid.UUID) (*stream.Stream, error) {
+func (m *MockStorage) Load(ctx context.Context, streamID uuid.UUID) (*stream.Stream, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Load", ctx, streamName, streamID)
+	ret := m.ctrl.Call(m, "Load", ctx, streamID)
 	ret0, _ := ret[0].(*stream.Stream)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Load indicates an expected call of Load
-func (mr *MockStorageMockRecorder) Load(ctx, streamName, streamID interface{}) *gomock.Call {
+func (mr *MockStorageMockRecorder) Load(ctx, streamID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockStorage)(nil).Load), ctx, streamName, streamID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockStorage)(nil).Load), ctx, streamID)
+}
+
+// Iter mocks base method
+func (m *MockStorage) Iter(ctx context.Context, fn func(*stream.Stream) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Iter", ctx, fn)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Iter indicates an expected call of Iter
+func (mr *MockStorageMockRecorder) Iter(ctx, fn interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iter", reflect.TypeOf((*MockStorage)(nil).Iter), ctx, fn)
 }
 
 // MarkUnpublished mocks base method

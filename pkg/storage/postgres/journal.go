@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v4"
 
 	"github.com/go-gulfstream/gulfstream/pkg/event"
-	"github.com/go-gulfstream/gulfstream/pkg/stream"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -123,31 +122,6 @@ func (j Journal) Load(ctx context.Context, streamName string, streamID uuid.UUID
 		events = append(events, e)
 	}
 	return events, rows.Err()
-}
-
-func (j Journal) Walk(ctx context.Context, streamName string, streamID uuid.UUID, fn stream.WalkFunc) error {
-	rows, err := query(ctx, j.pool, selectEventsSQL, streamName, streamID)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if rows.Err() != nil {
-			return rows.Err()
-		}
-		var rawdata []byte
-		if err := rows.Scan(&rawdata); err != nil {
-			return err
-		}
-		e, err := j.decodeEvent(rawdata)
-		if err != nil {
-			return err
-		}
-		if err := fn(e); err != nil {
-			return err
-		}
-	}
-	return rows.Err()
 }
 
 func (j Journal) decodeEvent(data []byte) (*event.Event, error) {

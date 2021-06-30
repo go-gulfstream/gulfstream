@@ -88,8 +88,8 @@ func TestServerMiddleware(t *testing.T) {
 func newMutation(ctrl *gomock.Controller) *stream.Mutator {
 	publisher := mockstream.NewMockPublisher(ctrl)
 	state := mockstream.NewMockState(ctrl)
-	store := storage.New(func() *stream.Stream {
+	store := storage.New("order", func() *stream.Stream {
 		return stream.Blank("one", state)
 	})
-	return stream.NewMutator("order", store, publisher)
+	return stream.NewMutator(store, publisher)
 }

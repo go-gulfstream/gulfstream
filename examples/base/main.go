@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	streamStorage := storage.New(blankStream)
+	orderStreamStorage := storage.New(orderStream, orderStreamFactory)
 
 	ctx := context.Background()
 	idx := new(someLocalIndexInMem)
@@ -48,11 +48,7 @@ func main() {
 		checkError(channel.Listen(ctx))
 	}()
 
-	mutator := stream.NewMutator(
-		orderStream,
-		streamStorage,
-		channel,
-	)
+	mutator := stream.NewMutator(orderStreamStorage, channel)
 
 	mutator.AddCommandController(addToCartCommand,
 		newAddToCartController(idx), stream.WithCommandControllerCreateIfNotExists())
@@ -75,7 +71,7 @@ func main() {
 	_, err = mutator.CommandSink(ctx, activateCmd)
 	checkError(err)
 
-	currentStream, err := streamStorage.Load(ctx, orderStream, streamID)
+	currentStream, err := orderStreamStorage.Load(ctx, streamID)
 	checkError(err)
 
 	fmt.Printf("currentStream: %s\n", currentStream.State().(*order))
@@ -83,7 +79,7 @@ func main() {
 
 }
 
-func blankStream() *stream.Stream {
+func orderStreamFactory() *stream.Stream {
 	return stream.New(
 		orderStream,
 		uuid.UUID{},

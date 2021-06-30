@@ -27,7 +27,7 @@ func main() {
 
 	ctx := context.Background()
 
-	commandbus := commandbusnats.NewClient(types.PartyStream, conn)
+	commandbus := commandbusnats.NewClient(types.PartyStreamName, conn)
 
 	go func() {
 		for {
@@ -102,9 +102,9 @@ func checkError(err error) {
 }
 
 func createParty(p types.CreateNewParty) *command.Command {
-	return command.New(types.CreateNewPartyCommand, types.PartyStream, uuid.New(), &p)
+	return command.New(types.CreateNewPartyCommand, types.PartyStreamName, uuid.New(), &p)
 }
 
 func addParticipant(streamID uuid.UUID, p types.AddParticipant) *command.Command {
-	return command.New(types.AddParticipantCommand, types.PartyStream, streamID, &p)
+	return command.New(types.AddParticipantCommand, types.PartyStreamName, streamID, &p)
 }

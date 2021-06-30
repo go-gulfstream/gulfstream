@@ -22,16 +22,16 @@ func TestMutator_EventSinkControllerNotFound(t *testing.T) {
 	publisher := mockstream.NewMockPublisher(ctrl)
 
 	// silent mode
-	mutator := stream.NewMutator("users", storage, publisher)
+	mutator := stream.NewMutator(storage, publisher)
 	event1 := event.New("event1", "users", uuid.New(), 1, nil)
 	assert.Nil(t, mutator.EventSink(context.Background(), event1))
 
 	// strict mode
-	mutator = stream.NewMutator("users", storage, publisher, stream.WithMutatorStrictMode())
+	mutator = stream.NewMutator(storage, publisher, stream.WithMutatorStrictMode())
 	event1 = event.New("event1", "users", uuid.New(), 1, nil)
 	err := mutator.EventSink(context.Background(), event1)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "mutator: controller for event users.event1")
+	assert.Contains(t, err.Error(), "mutator.EventSink controller")
 }
 
 func TestMutator_SetBlacklistOfEvents(t *testing.T) {
@@ -40,7 +40,7 @@ func TestMutator_SetBlacklistOfEvents(t *testing.T) {
 	publisher := mockstream.NewMockPublisher(ctrl)
 
 	// silent mode
-	mutator := stream.NewMutator("users", storage, publisher)
+	mutator := stream.NewMutator(storage, publisher)
 	mutator.SetBlacklistOfEvents("event1", "event2")
 	event1 := event.New("event1", "users", uuid.New(), 1, nil)
 	event2 := event.New("event2", "users", uuid.New(), 2, nil)
@@ -48,22 +48,23 @@ func TestMutator_SetBlacklistOfEvents(t *testing.T) {
 	assert.Nil(t, mutator.EventSink(context.Background(), event2))
 
 	// strict mode
-	mutator = stream.NewMutator("users", storage, publisher, stream.WithMutatorStrictMode())
+	mutator = stream.NewMutator(storage, publisher, stream.WithMutatorStrictMode())
 	mutator.SetBlacklistOfEvents("event1", "event2")
 	event1 = event.New("event1", "users", uuid.New(), 1, nil)
 	err := mutator.EventSink(context.Background(), event1)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "mutator: event cycles users.event1")
+	assert.Contains(t, err.Error(), "stream: mutator.EventSink event cycles")
 }
 
 func TestMutator_EventSinkPickStreamError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	groupJoinedController := mockstream.NewMockEventController(ctrl)
 	storage := mockstream.NewMockStorage(ctrl)
+	storage.EXPECT().StreamName().Return("users")
 	publisher := mockstream.NewMockPublisher(ctrl)
 
 	// users stream
-	usersMutator := stream.NewMutator("users", storage, publisher, stream.WithMutatorStrictMode())
+	usersMutator := stream.NewMutator(storage, publisher, stream.WithMutatorStrictMode())
 	usersMutator.AddEventController("groupJoined", groupJoinedController)
 
 	// group stream
@@ -85,14 +86,13 @@ func TestMutator_EventSinkPickOneStream(t *testing.T) {
 	groupID := uuid.New()
 
 	ctx := context.Background()
-	storage.EXPECT().Load(ctx, userStream.Name(), userID).Return(userStream, nil)
+	storage.EXPECT().Load(ctx, userID).Return(userStream, nil)
 	storage.EXPECT().Persist(ctx, userStream).Return(nil)
 
 	publisher.EXPECT().Publish(gomock.Any()).Return(nil)
 
 	// users stream
 	usersMutator := stream.NewMutator(
-		userStream.Name(),
 		storage,
 		publisher,
 		stream.WithMutatorStrictMode(),

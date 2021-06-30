@@ -20,8 +20,8 @@ import (
 )
 
 func main() {
-	streamStorage := storage.New(blankPartyStream)
-	mutator := stream.NewMutator(types.PartyStream, streamStorage, customPublisher{})
+	partyStreamStorage := storage.New(types.PartyStreamName, partyStreamFactory)
+	mutator := stream.NewMutator(partyStreamStorage, customPublisher{})
 
 	mutation := newMutation()
 
@@ -34,7 +34,7 @@ func main() {
 		types.AddParticipantCommand,
 		AddParticipantController(mutation))
 
-	commandbus := commandbusnats.NewServer(types.PartyStream, mutator,
+	commandbus := commandbusnats.NewServer(types.PartyStreamName, mutator,
 		commandbusnats.WithServerErrorHandler(func(msg *nats.Msg, err error) {
 			log.Printf("[ERR] msg:%s, %v\n", msg.Subject, err)
 		}))
@@ -53,8 +53,8 @@ func main() {
 	<-c
 }
 
-func blankPartyStream() *stream.Stream {
-	return stream.Blank(types.PartyStream, &state{})
+func partyStreamFactory() *stream.Stream {
+	return stream.Blank(types.PartyStreamName, &state{})
 }
 
 func checkError(err error) {

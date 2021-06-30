@@ -3,17 +3,21 @@ package stream
 import (
 	"context"
 
+	"github.com/go-gulfstream/gulfstream/pkg/event"
+
 	"github.com/google/uuid"
 )
 
 type Storage interface {
-	BlankStream() *Stream
+	StreamName() string
+	NewStream() *Stream
 	Persist(ctx context.Context, s *Stream) error
-	Load(ctx context.Context, streamName string, streamID uuid.UUID) (*Stream, error)
+	Load(ctx context.Context, streamID uuid.UUID) (*Stream, error)
+	Iter(ctx context.Context, fn func(*Stream) error) error
 	MarkUnpublished(ctx context.Context, s *Stream) error
 }
 
-var _ Storage = (*StorageWithJournal)(nil)
+type WalkFunc func(*Stream, []*event.Event) error
 
 type StorageWithJournal struct {
 	storage Storage
@@ -30,7 +34,7 @@ func NewStorageWithJournal(storage Storage, journal Journal, txn TxnFunc) Storag
 }
 
 func (sj StorageWithJournal) BlankStream() *Stream {
-	return sj.storage.BlankStream()
+	return sj.storage.NewStream()
 }
 
 func (sj StorageWithJournal) Persist(ctx context.Context, s *Stream) error {
@@ -42,8 +46,8 @@ func (sj StorageWithJournal) Persist(ctx context.Context, s *Stream) error {
 	})
 }
 
-func (sj StorageWithJournal) Load(ctx context.Context, streamName string, streamID uuid.UUID) (*Stream, error) {
-	return sj.storage.Load(ctx, streamName, streamID)
+func (sj StorageWithJournal) Load(ctx context.Context, streamID uuid.UUID) (*Stream, error) {
+	return sj.storage.Load(ctx, streamID)
 }
 
 func (sj StorageWithJournal) MarkUnpublished(ctx context.Context, s *Stream) error {

@@ -20,10 +20,14 @@ type Storage struct {
 	pool        *pgxpool.Pool
 	blankStream func() *stream.Stream
 	eventCodec  event.Encoding
+	streamName  string
 }
+
+var _ stream.Storage = (*Storage)(nil)
 
 func NewStorage(
 	pool *pgxpool.Pool,
+	streamName string,
 	blankStream func() *stream.Stream,
 	opts ...StorageOption,
 ) Storage {
@@ -35,6 +39,10 @@ func NewStorage(
 		opt(&storage)
 	}
 	return storage
+}
+
+func (s Storage) StreamName() string {
+	return s.streamName
 }
 
 func (s Storage) Txn(ctx context.Context, fn func(txnCtx context.Context) error) error {
@@ -49,7 +57,7 @@ func (s Storage) Txn(ctx context.Context, fn func(txnCtx context.Context) error)
 	return tx.Commit(ctx)
 }
 
-func (s Storage) BlankStream() *stream.Stream {
+func (s Storage) NewStream() *stream.Stream {
 	return s.blankStream()
 }
 
@@ -69,13 +77,13 @@ func (s Storage) Persist(ctx context.Context, ss *stream.Stream) (err error) {
 	return
 }
 
-func (s Storage) Load(ctx context.Context, streamName string, streamID uuid.UUID) (*stream.Stream, error) {
-	row := queryRow(ctx, s.pool, selectStateSQL, streamName, streamID.String())
+func (s Storage) Load(ctx context.Context, streamID uuid.UUID) (*stream.Stream, error) {
+	row := queryRow(ctx, s.pool, selectStateSQL, s.streamName, streamID.String())
 	var rawData []byte
 	if err := row.Scan(&rawData); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("storage/postgres: storage.Load(%s,%s) not found",
-				streamName, streamID)
+				s.streamName, streamID)
 		}
 		return nil, err
 	}
@@ -91,6 +99,10 @@ func (s Storage) MarkUnpublished(ctx context.Context, ss *stream.Stream) (err er
 		return
 	}
 	return exec(ctx, s.pool, insertUnpublishedSQL, ss.Name(), ss.ID().String(), ss.Version())
+}
+
+func (s Storage) Iter(ctx context.Context, fn func(*stream.Stream) error) error {
+	return nil
 }
 
 func (s Storage) decodeEvent(data []byte) (*event.Event, error) {
