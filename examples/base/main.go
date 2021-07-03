@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-gulfstream/gulfstream/pkg/storage"
-
 	"github.com/go-gulfstream/gulfstream/pkg/command"
 
 	"github.com/go-gulfstream/gulfstream/pkg/eventbus"
@@ -19,7 +17,7 @@ import (
 )
 
 func main() {
-	orderStreamStorage := storage.New(orderStream, orderStreamFactory)
+	orderStreamStorage := stream.NewStorage(orderStream, orderStreamFactory)
 
 	ctx := context.Background()
 	idx := new(someLocalIndexInMem)

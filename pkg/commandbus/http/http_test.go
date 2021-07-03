@@ -9,8 +9,6 @@ import (
 	mockstream "github.com/go-gulfstream/gulfstream/mocks/stream"
 	"github.com/golang/mock/gomock"
 
-	"github.com/go-gulfstream/gulfstream/pkg/storage"
-
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
@@ -88,7 +86,7 @@ func TestServerMiddleware(t *testing.T) {
 func newMutation(ctrl *gomock.Controller) *stream.Mutator {
 	publisher := mockstream.NewMockPublisher(ctrl)
 	state := mockstream.NewMockState(ctrl)
-	store := storage.New("order", func() *stream.Stream {
+	store := stream.NewStorage("order", func() *stream.Stream {
 		return stream.Blank("one", state)
 	})
 	return stream.NewMutator(store, publisher)

@@ -91,31 +91,3 @@ func (mr *MockStorageMockRecorder) Load(ctx, streamID interface{}) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockStorage)(nil).Load), ctx, streamID)
 }
-
-// Iter mocks base method
-func (m *MockStorage) Iter(ctx context.Context, fn func(*stream.Stream) error) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Iter", ctx, fn)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Iter indicates an expected call of Iter
-func (mr *MockStorageMockRecorder) Iter(ctx, fn interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Iter", reflect.TypeOf((*MockStorage)(nil).Iter), ctx, fn)
-}
-
-// MarkUnpublished mocks base method
-func (m *MockStorage) MarkUnpublished(ctx context.Context, s *stream.Stream) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkUnpublished", ctx, s)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MarkUnpublished indicates an expected call of MarkUnpublished
-func (mr *MockStorageMockRecorder) MarkUnpublished(ctx, s interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkUnpublished", reflect.TypeOf((*MockStorage)(nil).MarkUnpublished), ctx, s)
-}

@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/go-gulfstream/gulfstream/pkg/storage"
-
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
 	"github.com/go-gulfstream/gulfstream/examples/commandbus-nats/types"
@@ -20,7 +18,7 @@ import (
 )
 
 func main() {
-	partyStreamStorage := storage.New(types.PartyStreamName, partyStreamFactory)
+	partyStreamStorage := stream.NewStorage(types.PartyStreamName, partyStreamFactory)
 	mutator := stream.NewMutator(partyStreamStorage, customPublisher{})
 
 	mutation := newMutation()

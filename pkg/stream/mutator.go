@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
@@ -168,11 +166,14 @@ func (m *Mutator) CommandSink(ctx context.Context, cmd *command.Command) (*comma
 	if len(stream.Changes()) == 0 {
 		return r, nil
 	}
+	if stream.ID() == uuid.Nil {
+		return nil, fmt.Errorf("unknown stream id")
+	}
 	if err := m.storage.Persist(ctx, stream); err != nil {
 		return nil, err
 	}
 	if err := m.publisher.Publish(stream.changes); err != nil {
-		return nil, multierror.Append(err, m.storage.MarkUnpublished(ctx, stream))
+		return nil, err
 	}
 	stream.ClearChanges()
 	return r, err
@@ -268,7 +269,7 @@ func (m *Mutator) eventSink(ctx context.Context, ec *eventController, s *Stream,
 		return err
 	}
 	if err := m.publisher.Publish(s.Changes()); err != nil {
-		return multierror.Append(err, m.storage.MarkUnpublished(ctx, s))
+		return err
 	}
 	s.ClearChanges()
 	return nil

@@ -12,8 +12,6 @@ import (
 	mockstream "github.com/go-gulfstream/gulfstream/mocks/stream"
 	"github.com/golang/mock/gomock"
 
-	"github.com/go-gulfstream/gulfstream/pkg/storage"
-
 	"google.golang.org/grpc/metadata"
 
 	"google.golang.org/grpc/codes"
@@ -162,7 +160,7 @@ func listen(t *testing.T) (string, net.Listener) {
 
 func newMutation(ctrl *gomock.Controller) *stream.Mutator {
 	publisher := mockstream.NewMockPublisher(ctrl)
-	stor := storage.New("order", func() *stream.Stream {
+	stor := stream.NewStorage("order", func() *stream.Stream {
 		return stream.Blank("one", &state{One: "one", Two: "two"})
 	})
 	return stream.NewMutator(stor, publisher)

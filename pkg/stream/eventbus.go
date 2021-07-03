@@ -23,3 +23,12 @@ type EventHandler interface {
 type EventErrorHandler interface {
 	HandleError(ctx context.Context, e *event.Event, err error)
 }
+
+type ConnectorPublisher struct {
+}
+
+func NewConnectorPublisher() Publisher {
+	return ConnectorPublisher{}
+}
+
+func (ConnectorPublisher) Publish(_ []*event.Event) error { return nil }

@@ -27,14 +27,6 @@ CREATE TABLE IF NOT EXISTS gulfstream.states
     PRIMARY KEY (stream_name, stream_id)
 );
 
-CREATE TABLE IF NOT EXISTS gulfstream.unpublished_events
-(
-    stream_id      uuid         NOT NULL,
-    stream_name    VARCHAR(128) NOT NULL,
-    version integer,
-    updated_at BIGINT
-);
-
 CREATE TABLE IF NOT EXISTS gulfstream.events
 (
     stream_id        uuid         NOT NULL,
@@ -42,6 +34,15 @@ CREATE TABLE IF NOT EXISTS gulfstream.events
     event_name      VARCHAR(256) NOT NULL,
     version    integer,
     created_at BIGINT,
+    raw_data    bytea,
+    PRIMARY KEY (stream_name, stream_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS gulfstream.outbox
+(
+    stream_id        uuid         NOT NULL,
+    stream_name      VARCHAR(128) NOT NULL,
+    version integer,
     raw_data    bytea,
     PRIMARY KEY (stream_name, stream_id, version)
 );
@@ -94,38 +95,40 @@ WHERE table_schema = 'gulfstream'`
 	dropTableSQL = `DROP TABLE IF EXISTS`
 
 	insertVersionSQL = `
-INSERT INTO gulfstream.versions (stream_id, stream_name, version) 
+INSERT INTO gulfstream.versions (stream_name, stream_id, version) 
 VALUES ($1, $2, $3)`
 
 	updateVersionSQL = `
 UPDATE gulfstream.versions 
 SET version=$1 
-WHERE stream_id=$2 AND stream_name=$3 AND version=$4`
+WHERE stream_name=$2 AND stream_id=$3 AND version=$4`
 
 	insertEventSQL = `
 INSERT INTO gulfstream.events (stream_id, stream_name, event_name, version, created_at, raw_data) 
 VALUES ($1, $2, $3, $4, $5, $6)`
 
-	selectEventsSQL = `
-SELECT raw_data 
-FROM gulfstream.events 
-WHERE stream_name=$1 AND stream_id=$2
-ORDER BY version ASC`
+	//	selectEventsSQL = `
+	//SELECT raw_data
+	//FROM gulfstream.events
+	//WHERE stream_name=$1 AND stream_id=$2
+	//ORDER BY version ASC`
 
 	insertStateSQL = `
-INSERT INTO  gulfstream.state (stream_name, stream_id, version, raw_data) 
+INSERT INTO  gulfstream.states (stream_name, stream_id, version, raw_data) 
 VALUES ($1, $2, $3, $4)`
 
 	updateStateSQL = `
-UPDATE gulfstream.state SET version=$1, raw_data=$2 
+UPDATE gulfstream.states SET version=$1, raw_data=$2 
 WHERE stream_name=$3 AND stream_id=$4`
 
 	selectStateSQL = `
 SELECT raw_data
-FROM gulfstream.state
+FROM gulfstream.states
 WHERE stream_name=$1 AND stream_id=$2`
 
-	insertUnpublishedSQL = `
-INSERT INTO  gulfstream.unpublished_events (stream_name, stream_id, version, created_at) 
+	insertOutboxSQL = `
+INSERT INTO gulfstream.outbox (stream_id, stream_name, version, raw_data) 
 VALUES ($1, $2, $3, $4)`
+
+	deleteOutboxSQL = `DELETE FROM gulfstream.outbox WHERE stream_name=$1 AND stream_id=$2 AND version <= $3`
 )

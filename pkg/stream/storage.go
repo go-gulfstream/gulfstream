@@ -2,8 +2,8 @@ package stream
 
 import (
 	"context"
-
-	"github.com/go-gulfstream/gulfstream/pkg/event"
+	"fmt"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -13,45 +13,70 @@ type Storage interface {
 	NewStream() *Stream
 	Persist(ctx context.Context, s *Stream) error
 	Load(ctx context.Context, streamID uuid.UUID) (*Stream, error)
-	Iter(ctx context.Context, fn func(*Stream) error) error
-	MarkUnpublished(ctx context.Context, s *Stream) error
 }
 
-type WalkFunc func(*Stream, []*event.Event) error
-
-type StorageWithJournal struct {
-	storage Storage
-	journal Journal
-	txn     TxnFunc
-}
-
-func NewStorageWithJournal(storage Storage, journal Journal, txn TxnFunc) StorageWithJournal {
-	return StorageWithJournal{
-		storage: storage,
-		journal: journal,
-		txn:     txn,
+func NewStorage(streamName string, newStream func() *Stream) Storage {
+	return &stateStorage{
+		data:        make(map[uuid.UUID][]byte),
+		versions:    make(map[uuid.UUID]int),
+		blankStream: newStream,
+		streamName:  streamName,
 	}
 }
 
-func (sj StorageWithJournal) BlankStream() *Stream {
-	return sj.storage.NewStream()
+type stateStorage struct {
+	mu          sync.RWMutex
+	data        map[uuid.UUID][]byte
+	blankStream func() *Stream
+	versions    map[uuid.UUID]int
+	streamName  string
 }
 
-func (sj StorageWithJournal) Persist(ctx context.Context, s *Stream) error {
-	return sj.txn(ctx, func(txnCtx context.Context) error {
-		if err := sj.Persist(txnCtx, s); err != nil {
+func (s *stateStorage) NewStream() *Stream {
+	return s.blankStream()
+}
+
+func (s *stateStorage) StreamName() string {
+	return s.streamName
+}
+
+func (s *stateStorage) Persist(_ context.Context, ss *Stream) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ss.Name() != s.streamName {
+		return fmt.Errorf("storage: mismatch stream names. got %s, expected %s",
+			ss.Name(), s.streamName)
+	}
+	rawData, found := s.data[ss.ID()]
+	if found {
+		prev := s.blankStream()
+		if err := prev.UnmarshalBinary(rawData); err != nil {
 			return err
 		}
-		return sj.journal.Append(txnCtx, s.Changes(), s.PreviousVersion())
-	})
+		if prev.Version() != ss.PreviousVersion() {
+			return fmt.Errorf("storage: mismatch stream version. got v%d, expected v%d",
+				prev.Version(), ss.PreviousVersion())
+		}
+	}
+	data, err := ss.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	s.data[ss.ID()] = data
+	return nil
 }
 
-func (sj StorageWithJournal) Load(ctx context.Context, streamID uuid.UUID) (*Stream, error) {
-	return sj.storage.Load(ctx, streamID)
+func (s *stateStorage) Load(_ context.Context, streamID uuid.UUID) (*Stream, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rawData, found := s.data[streamID]
+	if !found {
+		return nil, fmt.Errorf("storage: %s{StreamID:%s} not found",
+			s.streamName, streamID)
+	}
+	blankStream := s.blankStream()
+	if err := blankStream.UnmarshalBinary(rawData); err != nil {
+		return nil, err
+	}
+	return blankStream, nil
 }
-
-func (sj StorageWithJournal) MarkUnpublished(ctx context.Context, s *Stream) error {
-	return sj.storage.MarkUnpublished(ctx, s)
-}
-
-type TxnFunc func(ctx context.Context, fn func(txnCtx context.Context) error) error
