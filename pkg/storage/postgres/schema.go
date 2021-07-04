@@ -107,12 +107,6 @@ WHERE stream_name=$2 AND stream_id=$3 AND version=$4`
 INSERT INTO gulfstream.events (stream_id, stream_name, event_name, version, created_at, raw_data) 
 VALUES ($1, $2, $3, $4, $5, $6)`
 
-	//	selectEventsSQL = `
-	//SELECT raw_data
-	//FROM gulfstream.events
-	//WHERE stream_name=$1 AND stream_id=$2
-	//ORDER BY version ASC`
-
 	insertStateSQL = `
 INSERT INTO  gulfstream.states (stream_name, stream_id, version, raw_data) 
 VALUES ($1, $2, $3, $4)`

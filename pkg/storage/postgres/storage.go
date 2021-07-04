@@ -26,7 +26,7 @@ type Storage struct {
 
 var _ stream.Storage = (*Storage)(nil)
 
-func NewStorage(
+func New(
 	pool *pgxpool.Pool,
 	streamName string,
 	blankStream func() *stream.Stream,
@@ -79,6 +79,9 @@ func (s Storage) Persist(ctx context.Context, ss *stream.Stream) (err error) {
 
 	for _, e := range ss.Changes() {
 		eventData, err := s.encodeEvent(e)
+		if err != nil {
+			return err
+		}
 		if err = s.appendEventToJournal(ctx, e, eventData); err != nil {
 			return err
 		}
@@ -95,6 +98,9 @@ func (s Storage) Persist(ctx context.Context, ss *stream.Stream) (err error) {
 		err = exec(ctx, s.pool, insertStateSQL, ss.Name(), ss.ID().String(), ss.Version(), rawData)
 	} else {
 		err = exec(ctx, s.pool, updateStateSQL, ss.Version(), rawData, ss.Name(), ss.ID().String())
+	}
+	if err != nil {
+		return
 	}
 	return exec(ctx, s.pool, deleteOutboxSQL, ss.Name(), ss.ID(), ss.Version())
 }
