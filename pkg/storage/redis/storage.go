@@ -57,30 +57,30 @@ func (s Storage) Persist(ctx context.Context, ss *stream.Stream) (err error) {
 	if err != nil {
 		return err
 	}
+
 	versionKey := toKey(ss.Name(), ss.ID().String(), versionPrefix)
-	strVer := s.rds.Get(ctx, versionKey).Val()
-	var currentVersion int
-	if len(strVer) > 0 {
-		currentVersion, err = strconv.Atoi(strVer)
-		if err != nil {
-			return err
+	err = s.rds.Watch(ctx, func(tx *redis.Tx) error {
+		strVer := tx.Get(ctx, versionKey).Val()
+		var currentVersion int
+		if len(strVer) > 0 {
+			currentVersion, err = strconv.Atoi(strVer)
+			if err != nil {
+				return err
+			}
 		}
-	}
-	if currentVersion > 0 && currentVersion <= ss.Version() {
-		return fmt.Errorf("storage/redis: stream %s already exists", ss)
-	}
-	if currentVersion != ss.PreviousVersion() {
-		return fmt.Errorf("storage/redis: mismatch stream version. got v%d, expected v%d",
-			currentVersion, ss.PreviousVersion())
-	}
-	pipe := s.rds.TxPipeline()
-	defer pipe.Close()
-	pipe.Set(ctx, toKey(ss.Name(), ss.ID().String(), versionPrefix), ss.Version(), -1)
-	pipe.Set(ctx, toKey(ss.Name(), ss.ID().String(), streamPrefix), rawData, -1)
-	_, err = pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
+		if currentVersion > ss.Version() {
+			return fmt.Errorf("storage/redis: stream %s already exists", ss)
+		}
+		if currentVersion != ss.PreviousVersion() {
+			return fmt.Errorf("storage/redis: mismatch stream version. got v%d, expected v%d",
+				currentVersion, ss.PreviousVersion())
+		}
+		pipe := tx.TxPipeline()
+		pipe.Set(ctx, toKey(ss.Name(), ss.ID().String(), versionPrefix), ss.Version(), -1)
+		pipe.Set(ctx, toKey(ss.Name(), ss.ID().String(), streamPrefix), rawData, -1)
+		_, err := pipe.Exec(ctx)
 		return err
-	}
+	}, versionKey)
 	if err == redis.Nil {
 		err = nil
 	}

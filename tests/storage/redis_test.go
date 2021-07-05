@@ -3,7 +3,9 @@ package storage
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -61,6 +63,35 @@ func (s *RedisSuite) TestPersist() {
 	}
 	assert.Equal(s.T(), 2, match)
 	assert.Error(s.T(), s.storage.Persist(s.ctx, testStream))
+}
+
+func (s *RedisSuite) TestPersistWithConcurrency() {
+	testStream := blankStream()
+	testStream.Mutate("event", nil)
+	assert.NoError(s.T(), s.storage.Persist(s.ctx, testStream))
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				someStream, err := s.storage.Load(s.ctx, testStream.ID())
+				assert.NoError(s.T(), err)
+				someStream.Mutate("someEvent", nil)
+				per := s.storage.Persist(s.ctx, someStream)
+				if per == nil {
+					break
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+		}()
+	}
+	wg.Wait()
+
+	fss, err := s.storage.Load(s.ctx, testStream.ID())
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), 11, fss.Version())
 }
 
 func (s *RedisSuite) TestLoad() {
