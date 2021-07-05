@@ -36,6 +36,10 @@ func Blank(name string, initState State) *Stream {
 	return New(name, uuid.UUID{}, initState)
 }
 
+func (s *Stream) String() string {
+	return s.Name() + ":" + s.ID().String()
+}
+
 func (s *Stream) Changes() []*event.Event {
 	return s.changes
 }

@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -43,8 +44,8 @@ func (s *stateStorage) StreamName() string {
 func (s *stateStorage) Persist(_ context.Context, ss *Stream) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if ss.Name() != s.streamName {
-		return fmt.Errorf("storage: mismatch stream names. got %s, expected %s",
+	if strings.Compare(s.streamName, ss.Name()) != 0 {
+		return fmt.Errorf("storage: different stream names got %s, expected %s",
 			ss.Name(), s.streamName)
 	}
 	rawData, found := s.data[ss.ID()]

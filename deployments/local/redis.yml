@@ -1,0 +1,15 @@
+version: '3.3'
+
+services:
+  redis:
+    hostname: redis
+    image: redis:alpine
+    command: redis-server
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./tmp/redis-data:/var/lib/redis
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    networks:
+      - gulfstream

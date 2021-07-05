@@ -4,6 +4,7 @@ DEPLOYMENTS_LOCAL_RUN = @docker-compose                               \
       -f $(DEPLOYMENTS_LOCAL)/network.yml                             \
       -f $(DEPLOYMENTS_LOCAL)/kafka.yml                               \
       -f $(DEPLOYMENTS_LOCAL)/postgres.yml                            \
+      -f $(DEPLOYMENTS_LOCAL)/redis.yml                               \
 
 .PHONY: docker-protoc
 docker-protoc:
@@ -22,6 +23,14 @@ mock: docker-mock
 docker-mock:
 	@docker build -t github.com/go-gulfstream/gulfstream/mock:latest -f    \
            ./docker/mockgen.dockerfile .
+
+.PHONY: infra-up
+infra-up:
+	@$(DEPLOYMENTS_LOCAL_RUN)  up -d
+
+.PHONY: infra-down
+infra-down:
+	@$(DEPLOYMENTS_LOCAL_RUN)  down --volumes
 
 .PHONY: test
 test:

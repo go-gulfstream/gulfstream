@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgconn"
 
@@ -55,7 +56,10 @@ func (s Storage) Persist(ctx context.Context, ss *stream.Stream) (err error) {
 	if ss == nil || ss.PreviousVersion() == ss.Version() {
 		return
 	}
-
+	if strings.Compare(s.streamName, ss.Name()) != 0 {
+		return fmt.Errorf("storage/postgres: different stream names got %s, expected %s",
+			ss.Name(), s.streamName)
+	}
 	rawData, err := ss.MarshalBinary()
 	if err != nil {
 		return err
