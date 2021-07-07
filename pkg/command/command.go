@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,6 +30,11 @@ func New(
 		createdAt:  time.Now().Unix(),
 		payload:    payload,
 	}
+}
+
+func (c *Command) String() string {
+	return fmt.Sprintf("Command{ID:%s, Name:%s, StreamName:%s, StreamID:%s, CreatedAt:%d}",
+		c.id, c.name, c.streamName, c.streamID, c.createdAt)
 }
 
 func (c *Command) ReplyOk(version int) *Reply {

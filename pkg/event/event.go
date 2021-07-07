@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +33,11 @@ func New(
 		version:    version,
 		createdAt:  time.Now().Unix(),
 	}
+}
+
+func (e *Event) String() string {
+	return fmt.Sprintf("Event{ID:%s, Name:%s, Version:%d, StreamName:%s, StreamID:%s, CreatedAt:%d}",
+		e.id, e.name, e.version, e.streamName, e.streamID, e.createdAt)
 }
 
 func (e *Event) ID() uuid.UUID {

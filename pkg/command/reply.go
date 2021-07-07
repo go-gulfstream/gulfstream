@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +21,11 @@ func newReply(commandID uuid.UUID, version int, err error) *Reply {
 		command:   commandID,
 		createdAt: time.Now().Unix(),
 	}
+}
+
+func (r *Reply) String() string {
+	return fmt.Sprintf("CommandReply{Command:%s, Version:%d, Err:%v}",
+		r.command, r.version, r.err)
 }
 
 func (r *Reply) StreamVersion() int {
