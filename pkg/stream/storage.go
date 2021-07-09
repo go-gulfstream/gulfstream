@@ -14,6 +14,7 @@ type Storage interface {
 	NewStream() *Stream
 	Persist(ctx context.Context, s *Stream) error
 	Load(ctx context.Context, streamID uuid.UUID) (*Stream, error)
+	Drop(ctx context.Context, streamID uuid.UUID) error
 }
 
 func NewStorage(streamName string, newStream func() *Stream) Storage {
@@ -80,4 +81,11 @@ func (s *stateStorage) Load(_ context.Context, streamID uuid.UUID) (*Stream, err
 		return nil, err
 	}
 	return blankStream, nil
+}
+
+func (s *stateStorage) Drop(_ context.Context, streamID uuid.UUID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.data, streamID)
+	return nil
 }

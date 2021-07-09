@@ -104,6 +104,10 @@ func (s Storage) Load(ctx context.Context, streamID uuid.UUID) (*stream.Stream, 
 	return blankStream, nil
 }
 
+func (s Storage) Drop(ctx context.Context, streamID uuid.UUID) error {
+	return nil
+}
+
 func toKey(name string, id string, prefix string) string {
 	return "gs." + prefix + "." + name + id
 }

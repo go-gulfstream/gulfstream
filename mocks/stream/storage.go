@@ -91,3 +91,17 @@ func (mr *MockStorageMockRecorder) Load(ctx, streamID interface{}) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockStorage)(nil).Load), ctx, streamID)
 }
+
+// Drop mocks base method
+func (m *MockStorage) Drop(ctx context.Context, streamID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Drop", ctx, streamID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Drop indicates an expected call of Drop
+func (mr *MockStorageMockRecorder) Drop(ctx, streamID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Drop", reflect.TypeOf((*MockStorage)(nil).Drop), ctx, streamID)
+}

@@ -18,11 +18,11 @@ import (
 )
 
 type Storage struct {
-	pool          *pgxpool.Pool
-	blankStream   func() *stream.Stream
-	eventCodec    event.Encoding
-	streamName    string
-	enableJournal bool
+	pool           *pgxpool.Pool
+	blankStream    func() *stream.Stream
+	eventCodec     event.Encoding
+	streamName     string
+	journalEnabled bool
 }
 
 var _ stream.Storage = (*Storage)(nil)
@@ -126,7 +126,7 @@ func (s Storage) updateStreamVersion(ctx context.Context, ss *stream.Stream) (er
 }
 
 func (s Storage) appendEventToJournal(ctx context.Context, e *event.Event, data []byte) (err error) {
-	if !s.enableJournal {
+	if !s.journalEnabled {
 		return
 	}
 	return exec(ctx, s.pool, insertEventSQL,
@@ -168,6 +168,14 @@ func (s Storage) Load(ctx context.Context, streamID uuid.UUID) (*stream.Stream, 
 	return blankStream, nil
 }
 
+func (s Storage) Drop(ctx context.Context, streamID uuid.UUID) error {
+	if s.journalEnabled {
+		return nil
+	}
+	// TODO:
+	return nil
+}
+
 func (s Storage) decodeEvent(data []byte) (*event.Event, error) {
 	if s.eventCodec != nil {
 		return s.eventCodec.Decode(data)
@@ -194,7 +202,7 @@ func WithCodec(c event.Encoding) StorageOption {
 
 func WithJournal() StorageOption {
 	return func(s *Storage) {
-		s.enableJournal = true
+		s.journalEnabled = true
 	}
 }
 

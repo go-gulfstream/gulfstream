@@ -176,6 +176,13 @@ func (m *Mutator) CommandSink(ctx context.Context, cmd *command.Command) (*comma
 		return nil, err
 	}
 	stream.ClearChanges()
+	if cc.dropStream {
+		if err := m.storage.Drop(ctx, stream.ID()); err != nil {
+			if m.strict {
+				return r, err
+			}
+		}
+	}
 	return r, err
 }
 
@@ -183,7 +190,7 @@ func (m *Mutator) SetBlacklistOfEvents(eventNames ...string) {
 	m.blacklistOfEvents = append(m.blacklistOfEvents, eventNames...)
 }
 
-func (m *Mutator) isMySelfEvent(e *event.Event) bool {
+func (m *Mutator) isMy(e *event.Event) bool {
 	if len(m.blacklistOfEvents) == 0 {
 		return false
 	}
@@ -202,7 +209,7 @@ func (m *Mutator) EventSink(ctx context.Context, e *event.Event) (err error) {
 		}
 		return
 	}
-	if m.isMySelfEvent(e) {
+	if m.isMy(e) {
 		if m.strict {
 			err = fmt.Errorf("stream: mutator.EventSink event cycles %s.%s",
 				e.StreamName(), e.Name())
@@ -272,6 +279,13 @@ func (m *Mutator) eventSink(ctx context.Context, ec *eventController, s *Stream,
 		return err
 	}
 	s.ClearChanges()
+	if ec.dropStream {
+		if err := m.storage.Drop(ctx, s.ID()); err != nil {
+			if m.strict {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -281,9 +295,21 @@ func WithCommandControllerCreateIfNotExists() CommandControllerOption {
 	}
 }
 
+func WithCommandControllerDropStream() CommandControllerOption {
+	return func(ctrl *commandController) {
+		ctrl.dropStream = true
+	}
+}
+
 func WithEventControllerCreateIfNotExists() EventControllerOption {
 	return func(ctrl *eventController) {
 		ctrl.createStream = true
+	}
+}
+
+func WithEventControllerDropStream() EventControllerOption {
+	return func(ctrl *eventController) {
+		ctrl.dropStream = true
 	}
 }
 
@@ -314,10 +340,12 @@ type commandController struct {
 	controller   CommandController
 	commandType  string
 	createStream bool
+	dropStream   bool
 }
 
 type eventController struct {
 	controller   EventController
 	eventType    string
 	createStream bool
+	dropStream   bool
 }
