@@ -55,7 +55,7 @@ func (p *Publisher) Publish(events []*event.Event) error {
 		if err != nil {
 			return err
 		}
-		route := e.StreamName() + e.StreamID().String()
+		route := e.StreamID().String()
 		headers := []sarama.RecordHeader{
 			{
 				Key:   []byte("_stream"),
