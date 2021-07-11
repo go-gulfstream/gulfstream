@@ -143,6 +143,7 @@ func (s Storage) appendEventToOutbox(ctx context.Context, e *event.Event, data [
 	if err := exec(ctx, s.pool, insertOutboxSQL,
 		e.StreamID().String(),
 		e.StreamName(),
+		e.Name(),
 		e.Version(),
 		data,
 	); err != nil {

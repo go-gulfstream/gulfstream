@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS gulfstream.outbox
 (
     stream_id        uuid         NOT NULL,
     stream_name      VARCHAR(128) NOT NULL,
+    event_name      VARCHAR(256) NOT NULL,
     version integer,
     raw_data    bytea,
     PRIMARY KEY (stream_name, stream_id, version)
@@ -121,8 +122,8 @@ FROM gulfstream.states
 WHERE stream_name=$1 AND stream_id=$2`
 
 	insertOutboxSQL = `
-INSERT INTO gulfstream.outbox (stream_id, stream_name, version, raw_data) 
-VALUES ($1, $2, $3, $4)`
+INSERT INTO gulfstream.outbox (stream_id, stream_name, event_name, version, raw_data) 
+VALUES ($1, $2, $3, $4, $5)`
 
 	deleteOutboxSQL = `DELETE FROM gulfstream.outbox WHERE stream_name=$1 AND stream_id=$2 AND version <= $3`
 )
