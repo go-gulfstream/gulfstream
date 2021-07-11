@@ -128,8 +128,24 @@ type groupJoinedPayload struct {
 	UserID uuid.UUID
 }
 
+func (p *groupJoinedPayload) MarshalBinary() ([]byte, error) {
+	return nil, nil
+}
+
+func (p *groupJoinedPayload) UnmarshalBinary(data []byte) error {
+	return nil
+}
+
 type userJoinedPayload struct {
 	GroupID uuid.UUID
+}
+
+func (p *userJoinedPayload) MarshalBinary() ([]byte, error) {
+	return nil, nil
+}
+
+func (p *userJoinedPayload) UnmarshalBinary(data []byte) error {
+	return nil
 }
 
 type userState struct {

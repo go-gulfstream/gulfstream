@@ -3,17 +3,16 @@ package types
 import (
 	"encoding/json"
 
+	"github.com/go-gulfstream/gulfstream/pkg/codec"
+
 	"github.com/go-gulfstream/gulfstream/pkg/command"
 )
 
 func init() {
-	err := command.AddKnownType(
-		(*CreateNewParty)(nil),
-		(*AddParticipant)(nil),
-	)
-	if err != nil {
-		panic(err)
-	}
+	command.RegisterCodecs(map[string]codec.Codec{
+		"CreateNewParty": &CreateNewParty{},
+		"AddParticipant": &AddParticipant{},
+	})
 }
 
 func (c *CreateNewParty) MarshalBinary() ([]byte, error) {

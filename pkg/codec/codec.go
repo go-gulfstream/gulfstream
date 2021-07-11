@@ -1,6 +1,8 @@
 package codec
 
+import "encoding"
+
 type Codec interface {
-	Decode([]byte) (interface{}, error)
-	Encode(interface{}) ([]byte, error)
+	encoding.BinaryUnmarshaler
+	encoding.BinaryMarshaler
 }

@@ -1,4 +1,4 @@
-package http
+package commandbushttp
 
 import (
 	"bytes"

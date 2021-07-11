@@ -32,7 +32,7 @@ func (c *addToCartController) CommandSink(_ context.Context, ss *stream.Stream, 
 		return cmd.ReplyErr(errSome), nil
 	}
 	prevState := ss.State().(*order)
-	ss.Mutate(addedToCartEvent, addedToCart{
+	ss.Mutate(addedToCartEvent, &addedToCart{
 		ShopID: payload.ShopID,
 		Name:   payload.Name,
 		Price:  payload.Price,

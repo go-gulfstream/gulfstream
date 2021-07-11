@@ -1,7 +1,9 @@
-package grpc
+package commandbusgrpc
 
 import (
 	"context"
+
+	"github.com/go-gulfstream/gulfstream/pkg/commandbus/grpc/proto"
 
 	"github.com/go-gulfstream/gulfstream/pkg/stream"
 
@@ -15,7 +17,7 @@ type ServerRequestFunc func(metadata.MD)
 type ServerErrorHandler func(err error)
 
 type Server struct {
-	UnimplementedCommandBusServer
+	proto.UnimplementedCommandBusServer
 	commandCodec command.Encoding
 	mutator      stream.CommandSinker
 	contextFunc  []ContextFunc
@@ -37,7 +39,7 @@ func NewServer(
 }
 
 func (s *Server) Register(grpcSrv *grpc.Server) {
-	RegisterCommandBusServer(grpcSrv, s)
+	proto.RegisterCommandBusServer(grpcSrv, s)
 }
 
 type ServerOption func(*Server)
@@ -66,7 +68,7 @@ func WithServerErrorHandler(fn ServerErrorHandler) ServerOption {
 	}
 }
 
-func (s *Server) CommandSink(ctx context.Context, req *Request) (*Response, error) {
+func (s *Server) CommandSink(ctx context.Context, req *proto.Request) (*proto.Response, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		md = metadata.MD{}
@@ -105,13 +107,13 @@ func (s *Server) decodeCommand(data []byte) (*command.Command, error) {
 	}
 }
 
-func (s *Server) write(b []byte) *Response {
-	return &Response{Data: b}
+func (s *Server) write(b []byte) *proto.Response {
+	return &proto.Response{Data: b}
 }
 
-func (s *Server) writeError(err error) *Response {
+func (s *Server) writeError(err error) *proto.Response {
 	for _, errFunc := range s.errorHandler {
 		errFunc(err)
 	}
-	return &Response{Error: err.Error()}
+	return &proto.Response{Error: err.Error()}
 }

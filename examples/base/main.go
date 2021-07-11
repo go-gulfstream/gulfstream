@@ -28,7 +28,7 @@ func main() {
 			func(ctx context.Context, e *event.Event) error {
 				idx.Increment()
 				fmt.Printf("event: addedToCart%v\nversion: %d\nstream: %s\n",
-					e.Payload().(addedToCart), e.Version(), e.StreamID())
+					e.Payload().(*addedToCart), e.Version(), e.StreamID())
 				return nil
 			}, nil),
 	)

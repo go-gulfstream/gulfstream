@@ -13,3 +13,11 @@ type addedToCart struct {
 	Price  float64
 	Total  int
 }
+
+func (p *addedToCart) UnmarshalBinary([]byte) error {
+	return nil
+}
+
+func (p *addedToCart) MarshalBinary() ([]byte, error) {
+	return nil, nil
+}

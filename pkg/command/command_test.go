@@ -31,3 +31,11 @@ func TestNew(t *testing.T) {
 type addCard struct {
 	Sum int
 }
+
+func (a addCard) MarshalBinary() ([]byte, error) {
+	return nil, nil
+}
+
+func (a addCard) UnmarshalBinary(data []byte) error {
+	return nil
+}

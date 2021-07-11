@@ -14,7 +14,7 @@ func TestCodec_Decode(t *testing.T) {
 		&somePayload{Test: "Test"},
 	)
 	c := NewCodec()
-	assert.Nil(t, c.AddKnownType((*somePayload)(nil)))
+	c.Register("somePayload", &somePayload{})
 	data, err := c.Encode(e)
 	assert.Nil(t, err)
 	assert.NotZero(t, data)

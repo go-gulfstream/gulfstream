@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "pkg/commandbus/grpc";
+option go_package = "pkg/commandbus/grpc/proto";
 
 service CommandBus {
   rpc CommandSink(Request) returns (Response) {}

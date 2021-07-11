@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-gulfstream/gulfstream/pkg/codec"
+
 	"github.com/google/uuid"
 )
 
@@ -13,14 +15,14 @@ type Command struct {
 	name       string
 	streamName string
 	createdAt  int64
-	payload    interface{}
+	payload    codec.Codec
 }
 
 func New(
 	name string,
 	streamName string,
 	streamID uuid.UUID,
-	payload interface{},
+	payload codec.Codec,
 ) *Command {
 	return &Command{
 		id:         uuid.New(),
@@ -33,8 +35,8 @@ func New(
 }
 
 func (c *Command) String() string {
-	return fmt.Sprintf("Command{ID:%s, Name:%s, StreamName:%s, StreamID:%s, CreatedAt:%d}",
-		c.id, c.name, c.streamName, c.streamID, c.createdAt)
+	return fmt.Sprintf("Command{ID:%s, Name:%s, StreamName:%s, StreamID:%s, CreatedAt:%d, Payload: %v}",
+		c.id, c.name, c.streamName, c.streamID, c.createdAt, c.payload)
 }
 
 func (c *Command) ReplyOk(version int) *Reply {
@@ -65,7 +67,7 @@ func (c *Command) StreamName() string {
 	return c.streamName
 }
 
-func (c *Command) Payload() interface{} {
+func (c *Command) Payload() codec.Codec {
 	return c.payload
 }
 

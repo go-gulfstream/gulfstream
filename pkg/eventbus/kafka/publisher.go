@@ -1,4 +1,4 @@
-package kafka
+package eventbuskafka
 
 import (
 	"github.com/Shopify/sarama"

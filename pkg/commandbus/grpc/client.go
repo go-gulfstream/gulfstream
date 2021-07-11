@@ -1,8 +1,10 @@
-package grpc
+package commandbusgrpc
 
 import (
 	"context"
 	"errors"
+
+	"github.com/go-gulfstream/gulfstream/pkg/commandbus/grpc/proto"
 
 	"github.com/go-gulfstream/gulfstream/pkg/command"
 	"google.golang.org/grpc"
@@ -14,7 +16,7 @@ type ClientResponseFunc func(metadata.MD, *command.Reply)
 type ContextFunc func(ctx context.Context) context.Context
 
 type Client struct {
-	client       CommandBusClient
+	client       proto.CommandBusClient
 	callOpts     []grpc.CallOption
 	requestFunc  []ClientRequestFunc
 	responseFunc []ClientResponseFunc
@@ -27,7 +29,7 @@ func NewClient(
 	opts ...ClientOption,
 ) *Client {
 	c := &Client{
-		client: NewCommandBusClient(conn),
+		client: proto.NewCommandBusClient(conn),
 	}
 	for _, f := range opts {
 		f(c)
@@ -83,7 +85,7 @@ func (c *Client) CommandSink(ctx context.Context, cmd *command.Command) (*comman
 	}
 
 	ctx = metadata.NewOutgoingContext(ctx, md)
-	resp, err := c.client.CommandSink(ctx, &Request{Data: data}, c.callOpts...)
+	resp, err := c.client.CommandSink(ctx, &proto.Request{Data: data}, c.callOpts...)
 	if err != nil {
 		return nil, err
 	}

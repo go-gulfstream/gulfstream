@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"unsafe"
 
 	"github.com/go-gulfstream/gulfstream/pkg/util"
@@ -35,15 +33,12 @@ type Encoding interface {
 }
 
 type Codec struct {
-	codec  map[string]codec.Codec
-	types  map[string]reflect.Type
-	global codec.Codec
+	codec map[string]codec.Codec
 }
 
 func NewCodec() *Codec {
 	return &Codec{
 		codec: make(map[string]codec.Codec),
-		types: make(map[string]reflect.Type),
 	}
 }
 
@@ -71,28 +66,15 @@ func (c *Codec) Encode(command *Command) ([]byte, error) {
 	return c.encodeContainer(command, payload)
 }
 
-func (c *Codec) encodePayload(command *Command) ([]byte, error) {
-	if command.payload == nil {
+func (c *Codec) encodePayload(cmd *Command) ([]byte, error) {
+	if cmd.payload == nil {
 		return nil, nil
 	}
-	if c.global != nil {
-		return c.global.Encode(command.payload)
+	_, found := c.codec[cmd.name]
+	if !found {
+		return nil, fmt.Errorf("%w %s", ErrCodecNotFound, cmd)
 	}
-	cc, found := c.codec[command.name]
-	if found {
-		return cc.Encode(command.payload)
-	}
-	_, found = c.types[command.name]
-	if found {
-		if enc, ok := command.payload.(encoding.BinaryMarshaler); ok {
-			return enc.MarshalBinary()
-		}
-		if enc, ok := command.payload.(json.Marshaler); ok {
-			return enc.MarshalJSON()
-		}
-	}
-	return nil, fmt.Errorf("%w for %s",
-		ErrCodecNotFound, command.name)
+	return cmd.Payload().MarshalBinary()
 }
 
 func (c *Codec) encodeContainer(command *Command, payload []byte) ([]byte, error) {
@@ -137,71 +119,47 @@ func (c *Codec) decodeContainer(data []byte) (*Command, []byte, error) {
 	return reader.container, payload, nil
 }
 
-func (c *Codec) decodePayload(name string, data []byte) (interface{}, error) {
+func (c *Codec) decodePayload(command string, data []byte) (codec.Codec, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	if c.global != nil {
-		return c.global.Decode(data)
+	cc, found := c.codec[command]
+	if !found {
+		return nil, fmt.Errorf("command: decoder for %s payload not found", command)
 	}
-	cc, found := c.codec[name]
-	if found {
-		return cc.Decode(data)
-	}
-	t, found := c.types[name]
-	if found && t.Kind() == reflect.Ptr {
-		val := reflect.New(t.Elem())
-		if dec, ok := val.Interface().(encoding.BinaryUnmarshaler); ok {
-			if err := dec.UnmarshalBinary(data); err != nil {
-				return nil, err
-			}
+	val := reflect.New(reflect.TypeOf(cc).Elem())
+	if dec, ok := val.Interface().(encoding.BinaryUnmarshaler); ok {
+		if err := dec.UnmarshalBinary(data); err != nil {
+			return nil, err
 		}
-		if dec, ok := val.Interface().(json.Unmarshaler); ok {
-			if err := dec.UnmarshalJSON(data); err != nil {
-				return nil, err
-			}
-		}
-		return val.Interface(), nil
+		return val.Interface().(codec.Codec), nil
 	}
-	return nil, fmt.Errorf("%w for %s command",
-		ErrCodecNotFound, name)
+	return nil, fmt.Errorf("command: decode payload for %s", command)
 }
 
-func (c *Codec) Register(name string, cc codec.Codec) {
-	if name == "*" {
-		c.global = cc
-	} else {
-		c.codec[name] = cc
+func (c *Codec) RegisterMap(commands map[string]codec.Codec) {
+	for command, cc := range commands {
+		c.Register(command, cc)
 	}
 }
 
-func (c *Codec) AddKnownType(types ...interface{}) error {
-	for _, typ := range types {
-		_, binUn := typ.(encoding.BinaryUnmarshaler)
-		_, jsonUn := typ.(json.Unmarshaler)
-		if !binUn && !jsonUn {
-			return fmt.Errorf("%s does not support encoding.BinaryUnmarshaler or json.Unmarshaler",
-				reflect.TypeOf(typ).String(),
-			)
-		}
-		typ := reflect.TypeOf(typ)
-		if typ.Kind() != reflect.Ptr {
-			return fmt.Errorf("non-pointer %s",
-				reflect.TypeOf(typ).String())
-		}
-		path := strings.Split(typ.String(), ".")
-		name := path[len(path)-1]
-		c.types[name] = typ
+func (c *Codec) Register(command string, cc codec.Codec) {
+	if cc == nil {
+		return
 	}
-	return nil
+	val := reflect.ValueOf(cc)
+	if val.Kind() != reflect.Ptr {
+		panic("command: Codec.Register(non-pointer " + command + ")")
+	}
+	c.codec[command] = cc
 }
 
-func AddKnownType(types ...interface{}) error {
-	return defaultCodec.AddKnownType(types...)
+func RegisterCodec(command string, cc codec.Codec) {
+	defaultCodec.Register(command, cc)
 }
 
-func RegisterCodec(name string, cc codec.Codec) {
-	defaultCodec.Register(name, cc)
+func RegisterCodecs(commands map[string]codec.Codec) {
+	defaultCodec.RegisterMap(commands)
 }
 
 func Encode(command *Command) ([]byte, error) {

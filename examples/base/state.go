@@ -39,7 +39,7 @@ func (o *order) Mutate(e *event.Event) {
 	case activatedEvent:
 		o.Activate = true
 	case addedToCartEvent:
-		payload := e.Payload().(addedToCart)
+		payload := e.Payload().(*addedToCart)
 		o.ShopID = payload.ShopID
 		o.Total = payload.Total
 		o.Items = append(o.Items, OrderItem{

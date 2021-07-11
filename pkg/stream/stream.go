@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/go-gulfstream/gulfstream/pkg/codec"
+
 	"github.com/go-gulfstream/gulfstream/pkg/event"
 
 	"github.com/google/uuid"
@@ -72,7 +74,7 @@ func (s *Stream) Unix() int64 {
 	return s.updatedAt
 }
 
-func (s *Stream) Mutate(eventName string, payload interface{}) {
+func (s *Stream) Mutate(eventName string, payload codec.Codec) {
 	version := s.Version() + 1
 	if s.isPlaceholderVersion() {
 		version++

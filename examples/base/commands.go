@@ -16,6 +16,14 @@ type addToCart struct {
 	Price  float64
 }
 
+func (p *addToCart) MarshalBinary() ([]byte, error) {
+	return nil, nil
+}
+
+func (p *addToCart) UnmarshalBinary([]byte) error {
+	return nil
+}
+
 func newAddToCartCommand(p *addToCart) *command.Command {
 	return command.New(addToCartCommand, orderStream, streamID, p)
 }
