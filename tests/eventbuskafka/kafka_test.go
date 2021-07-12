@@ -63,21 +63,25 @@ func (s *KafkaSuite) TestPublishSubscriber() {
 			return nil
 		})
 	sub.Subscribe(s.topic, proj)
+	publisher := eventbuskafka.NewPublisher(s.addr, nil)
+	defer publisher.Close()
+	var err error
+	for i := 0; i < 7; i++ {
+		err = publisher.Connect()
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	s.NoError(err)
 	go func() {
 		s.NoError(sub.Listen(context.Background()))
 	}()
-	select {
-	case <-waitSubscriber:
-	case <-time.After(5 * time.Second):
-		s.T().Fatal("timeout")
-	}
-	publisher := eventbuskafka.NewPublisher(s.addr, nil)
-	defer publisher.Close()
-	s.NoError(publisher.Connect())
+	<-waitSubscriber
 	s.NoError(publisher.Publish([]*event.Event{
 		event.New("event1", s.topic, uuid.New(), 1, nil),
 		event.New("event2", s.topic, uuid.New(), 2, nil),
 	}))
-	<-time.After(2 * time.Second)
+	<-time.After(time.Second)
 	s.Equal(uint32(2), total)
 }
