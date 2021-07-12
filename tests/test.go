@@ -8,7 +8,7 @@ import (
 const (
 	RedisAddr    = "127.0.0.1:6380"
 	PostgresAddr = "postgres://root:root@127.0.0.1:5435/postgres"
-	KafkaAddr    = ""
+	KafkaAddr    = "127.0.0.1:9092"
 )
 
 func SkipIfNotIntegration(t *testing.T) {

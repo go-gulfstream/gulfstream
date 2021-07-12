@@ -13,7 +13,7 @@ func DefaultConfig() *sarama.Config {
 	conf.Producer.Return.Errors = true
 	conf.Producer.MaxMessageBytes = 1e6
 	conf.Producer.RequiredAcks = sarama.WaitForAll
-	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
+	conf.Consumer.Offsets.Initial = sarama.OffsetNewest
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
 	return conf
 }
