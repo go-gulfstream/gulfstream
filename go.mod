@@ -13,6 +13,7 @@ require (
 	github.com/jackc/pgx/v4 v4.11.0
 	github.com/nats-io/nats.go v1.11.0
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.38.0
 )
