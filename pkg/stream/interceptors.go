@@ -19,3 +19,13 @@ func WithCommandSinkerInterceptor(s CommandSinker, other ...CommandSinkerInterce
 	}
 	return s
 }
+
+type EventHandlerInterceptor func(handler EventHandler) EventHandler
+
+func WithEventHandlerInterceptor(eh EventHandler, other ...EventHandlerInterceptor) EventHandler {
+	for i := len(other) - 1; i >= 0; i-- {
+		interceptor := other[i]
+		eh = interceptor(eh)
+	}
+	return eh
+}

@@ -11,7 +11,7 @@ import (
 
 func NewEventLogging(logger *logrus.Entry) stream.EventSinkerInterceptor {
 	return func(sinker stream.EventSinker) stream.EventSinker {
-		return eventLogging{
+		return eventSinkLogging{
 			next:   sinker,
 			logger: logger,
 		}
@@ -22,12 +22,12 @@ func DefaultEventLogging() stream.EventSinkerInterceptor {
 	return NewEventLogging(logrus.NewEntry(logrus.New()))
 }
 
-type eventLogging struct {
+type eventSinkLogging struct {
 	next   stream.EventSinker
 	logger *logrus.Entry
 }
 
-func (l eventLogging) EventSink(ctx context.Context, e *event.Event) error {
+func (l eventSinkLogging) EventSink(ctx context.Context, e *event.Event) error {
 	startTime := time.Now()
 	err := l.next.EventSink(ctx, e)
 	took := time.Since(startTime)

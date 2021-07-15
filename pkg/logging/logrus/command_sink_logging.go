@@ -11,7 +11,7 @@ import (
 
 func NewCommandSinkerLogging(logger *logrus.Entry) stream.CommandSinkerInterceptor {
 	return func(sinker stream.CommandSinker) stream.CommandSinker {
-		return commandLogging{
+		return commandSinkLogging{
 			next:   sinker,
 			logger: logger,
 		}
@@ -22,12 +22,12 @@ func DefaultCommandSinkerLogging() stream.CommandSinkerInterceptor {
 	return NewCommandSinkerLogging(logrus.NewEntry(logrus.New()))
 }
 
-type commandLogging struct {
+type commandSinkLogging struct {
 	next   stream.CommandSinker
 	logger *logrus.Entry
 }
 
-func (l commandLogging) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
+func (l commandSinkLogging) CommandSink(ctx context.Context, cmd *command.Command) (*command.Reply, error) {
 	startTime := time.Now()
 	reply, err := l.next.CommandSink(ctx, cmd)
 	took := time.Since(startTime)
