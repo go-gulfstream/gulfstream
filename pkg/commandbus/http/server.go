@@ -2,6 +2,7 @@ package commandbushttp
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -85,6 +86,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	if len(data) == 0 {
+		s.writeError(w, fmt.Errorf("no data"))
+		return
+	}
 
 	cmd, err := s.decodeCommand(data)
 	if err != nil {
