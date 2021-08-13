@@ -151,6 +151,9 @@ func (s *Subscriber) Listen(ctx context.Context) (err error) {
 }
 
 func (s *Subscriber) Close() error {
+	if s.consumerGroup == nil {
+		return nil
+	}
 	return s.consumerGroup.Close()
 }
 
